@@ -3,10 +3,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 // Gunakan lazy load (dynamic import) untuk efisiensi
 const routes = [
   { path: '/', component: () => import('../pages/LoginPage.vue') },
-  { path: '/login', component: () => import('../pages/LoginPage.vue') },
-  { path: '/forgot-password', component: () => import('../pages/ForgotPassword.vue') },
-  { path: '/reset-password', component: () => import('../pages/ResetPassword.vue') },
-  { path: '/otp', component: () => import('../pages/OtpVerification.vue') },
+  { path: '/login', name: 'login', component: () => import('../pages/LoginPage.vue') },
+  { path: '/forgot-password', name: 'forgot-password', component: () => import('../pages/ForgotPassword.vue') },
+  { path: '/reset-password', name: 'reset-password', component: () => import('../pages/ResetPassword.vue') },
+  { path: '/otp', name: 'otp', component: () => import('../pages/OtpVerification.vue') },
 
   // Tambahkan route wildcard di paling bawah
   {

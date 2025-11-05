@@ -38,7 +38,8 @@
           <!-- Pesan status -->
           <div class="text-center text-sm mb-3">
             <p v-if="timer > 0" class="text-gray-600">
-              Kirim ulang kode dalam <span class="font-semibold">{{ timer }}</span> detik
+              Kirim ulang kode dalam
+              <span class="font-semibold">{{ timer }}</span> detik
             </p>
             <button
               v-else
@@ -54,9 +55,10 @@
           <button
             class="btn btn-primary w-full font-semibold"
             type="submit"
-            :disabled="!isOtpFilled"
+            :disabled="!isOtpFilled || loading"
           >
-            <i class="fa-solid fa-shield-keyhole mr-2"></i> Verifikasi Kode
+            <i class="fa-solid fa-shield-keyhole mr-2"></i>
+            {{ loading ? "Memverifikasi..." : "Verifikasi Kode" }}
           </button>
 
           <!-- Pesan Error -->
@@ -76,17 +78,21 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue"
+import { useRouter } from "vue-router"
+import { api } from "../api/config"
 import AuthLayout from "../layouts/AuthLayout.vue"
 
+const router = useRouter()
 const otp = ref<string[]>(["", "", "", "", "", ""])
 const otpDigits = [0, 1, 2, 3, 4, 5]
 const error = ref("")
 const success = ref("")
 const timer = ref(30)
+const loading = ref(false)
 let countdown: ReturnType<typeof setInterval> | null = null
 
-// Simulasi OTP benar
-const correctOtp = "123456"
+// Ambil email atau user_id dari localStorage (dikirim dari halaman login)
+const email = ref(localStorage.getItem("otp_email") || "")
 
 // Cek apakah semua input sudah diisi
 const isOtpFilled = computed(() => otp.value.every((v) => v.trim() !== ""))
@@ -109,27 +115,47 @@ const movePrev = (index: number, e: KeyboardEvent) => {
 }
 
 // Fungsi verifikasi OTP
-const verifyOtp = () => {
+const verifyOtp = async () => {
   error.value = ""
   success.value = ""
+  loading.value = true
 
-  const entered = otp.value.join("")
+  const enteredOtp = otp.value.join("")
 
-  if (entered === correctOtp) {
-    success.value = "Verifikasi berhasil! Anda akan diarahkan..."
-    setTimeout(() => {
-      alert("Login sukses, diarahkan ke dashboard 🎉")
-      // Router.push('/dashboard') — tambahkan nanti setelah routing aktif
-    }, 1500)
-  } else {
-    error.value = "Kode OTP salah. Silakan coba lagi."
-    otp.value = ["", "", "", "", "", ""]
+  try {
+    const response = await api.post("/auth/verify-otp", {
+      otp_code: enteredOtp,
+    })
+
+    if (response.data.success) {
+      success.value = response.data.message || "Verifikasi berhasil!"
+      console.log(response.data)
+      // simpan email ke localStorage
+      localStorage.setItem("email", response.data.data.email)
+      localStorage.setItem("name", response.data.data.name)
+      localStorage.setItem("access_token", response.data.data.access_token)
+      localStorage.setItem("refresh_token", response.data.data.refresh_token)
+      localStorage.setItem("role", response.data.data.roles[0].name)
+      localStorage.removeItem("otp_email")
+
+      setTimeout(() => {
+        router.push("/dashboard")
+      }, 1500)
+    } else {
+      error.value = response.data.message || "Kode OTP salah, silakan coba lagi."
+      otp.value = ["", "", "", "", "", ""]
+    }
+  } catch (err: any) {
+    error.value = err.response?.data?.message || "Terjadi kesalahan server."
+  } finally {
+    loading.value = false
   }
 }
 
 // Hitung mundur pengiriman ulang OTP
 const startTimer = () => {
   timer.value = 30
+  if (countdown) clearInterval(countdown)
   countdown = setInterval(() => {
     if (timer.value > 0) timer.value--
     else if (countdown) clearInterval(countdown)
@@ -137,27 +163,35 @@ const startTimer = () => {
 }
 
 // Fungsi kirim ulang OTP
-const resendOtp = () => {
-  alert("Kode OTP baru telah dikirim ✅")
-  startTimer()
+const resendOtp = async () => {
+  error.value = ""
+  success.value = ""
+  try {
+    const res = await api.post("/auth/resend-otp", { email: email.value })
+    success.value = res.data.message || "Kode OTP baru telah dikirim ✅"
+    startTimer()
+  } catch {
+    error.value = "Gagal mengirim ulang OTP. Coba lagi nanti."
+  }
 }
 
 onMounted(() => {
   startTimer()
+  if (!email.value) {
+    router.push("/login")
+  }
 })
 </script>
 
 <style scoped>
 @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css");
 
-/* Efek input */
 input:focus {
   outline: none;
   border-color: #0ea5e9; /* sky-500 */
   box-shadow: 0 0 8px rgba(14, 165, 233, 0.4);
 }
 
-/* Transisi lembut */
 input {
   transition: all 0.2s ease-in-out;
 }

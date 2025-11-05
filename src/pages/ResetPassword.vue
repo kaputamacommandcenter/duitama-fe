@@ -43,8 +43,16 @@
             />
           </div>
 
-          <!-- Pesan Error -->
-          <p v-if="error" class="text-error text-center mb-2">{{ error }}</p>
+          <!-- Pesan Error / Sukses -->
+          <p v-if="error" class="text-red-600 font-medium text-center mb-2">
+            {{ error }}
+          </p>
+          <p
+            v-if="success"
+            class="text-green-600 font-medium text-center mb-2 animate-fade-in"
+          >
+            {{ success }}
+          </p>
 
           <!-- Tombol Submit -->
           <button
@@ -71,18 +79,22 @@
 
 <script setup lang="ts">
 import { ref } from "vue"
+import { useRouter, useRoute } from "vue-router"
 import AuthLayout from "../layouts/AuthLayout.vue"
-import { useRouter } from "vue-router"
+import { api } from "../api/config"
 
 const router = useRouter()
+const route = useRoute()
 
 const newPassword = ref("")
 const confirmPassword = ref("")
 const error = ref("")
+const success = ref("")
 const isLoading = ref(false)
 
 const handleResetPassword = async () => {
   error.value = ""
+  success.value = ""
 
   if (newPassword.value.length < 6) {
     error.value = "Password minimal 6 karakter."
@@ -96,15 +108,47 @@ const handleResetPassword = async () => {
 
   isLoading.value = true
 
-  // Simulasi proses API reset
-  setTimeout(() => {
+  try {
+    const token = route.query.token
+    const email = route.query.email
+
+    const response = await api.post("/auth/reset-password", {
+      token: token,
+      email: email,
+      password: newPassword.value,
+      password_confirmation: confirmPassword.value,
+    })
+
+    if (response.data.success) {
+      success.value = "✅ Password berhasil direset! Silakan login kembali."
+      setTimeout(() => router.push("/login"), 1800)
+    } else {
+      error.value = response.data.message || "Gagal mereset password."
+    }
+  } catch (err: any) {
+    error.value =
+      err.response?.data?.message || "Terjadi kesalahan saat reset password."
+  } finally {
     isLoading.value = false
-    alert("Password berhasil direset! Silakan login kembali.")
-    router.push("/login")
-  }, 1500)
+  }
 }
 </script>
 
 <style scoped>
 @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css");
+
+/* Animasi lembut untuk pesan sukses */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out;
+}
 </style>

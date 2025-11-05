@@ -39,7 +39,7 @@
             />
           </div>
 
-          <!-- Captcha Perhitungan -->
+          <!-- Captcha -->
           <div class="form-control mb-3">
             <label class="label">
               <span class="label-text font-semibold">Verifikasi</span>
@@ -51,7 +51,11 @@
               >
                 {{ captchaQuestion }}
               </div>
-              <button type="button" class="btn btn-sm btn-outline" @click="generateCaptcha">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline"
+                @click="generateCaptcha"
+              >
                 <i class="fa-solid fa-rotate"></i>
               </button>
             </div>
@@ -64,21 +68,30 @@
               required
             />
 
-            <!-- Indikator captcha -->
-            <p v-if="captchaAnswer !== null" class="text-sm mt-1"
-               :class="isCaptchaCorrect ? 'text-green-600' : 'text-red-600'">
+            <p
+              v-if="captchaAnswer !== null"
+              class="text-sm mt-1"
+              :class="isCaptchaCorrect ? 'text-green-600' : 'text-red-600'"
+            >
               {{ isCaptchaCorrect ? 'Captcha benar ✅' : 'Captcha salah ❌' }}
             </p>
           </div>
 
-          <!-- Remember + Forgot -->
+          <!-- Remember -->
           <div class="flex justify-between items-center text-sm mb-4">
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" v-model="rememberMe" class="checkbox checkbox-sm" />
+              <input
+                type="checkbox"
+                v-model="rememberMe"
+                class="checkbox checkbox-sm"
+              />
               <span class="text-gray-700">Remember me</span>
             </label>
 
-            <RouterLink to="/forgot-password" class="text-blue-600 hover:underline">
+            <RouterLink
+              to="/forgot-password"
+              class="text-blue-600 hover:underline"
+            >
               Forgot password?
             </RouterLink>
           </div>
@@ -87,10 +100,16 @@
           <button
             class="btn w-full text-white font-semibold"
             type="submit"
-            :disabled="!isCaptchaCorrect"
-            :class="isCaptchaCorrect ? 'btn-primary' : 'btn-disabled bg-gray-400 cursor-not-allowed'"
+            :disabled="loading || !isCaptchaCorrect"
+            :class="
+              isCaptchaCorrect
+                ? 'btn-primary'
+                : 'btn-disabled bg-gray-400 cursor-not-allowed'
+            "
           >
-            <i class="fa-solid fa-right-to-bracket mr-2"></i> Masuk
+            <i v-if="!loading" class="fa-solid fa-right-to-bracket mr-2"></i>
+            <span v-if="loading" class="loading loading-spinner mr-2"></span>
+            {{ loading ? 'Memproses...' : 'Masuk' }}
           </button>
 
           <!-- Pesan Error -->
@@ -105,18 +124,23 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue"
+import { useRouter } from "vue-router"
+import { api } from "../api/config" // ✅ gunakan konfigurasi axios global
 import AuthLayout from "../layouts/AuthLayout.vue"
+
+const router = useRouter()
 
 const username = ref("")
 const password = ref("")
 const rememberMe = ref(false)
 const error = ref("")
+const loading = ref(false)
 
 const captchaQuestion = ref("")
 const captchaResult = ref(0)
 const captchaAnswer = ref<number | null>(null)
 
-// Fungsi buat soal aritmatika acak
+// 🔹 Generate captcha
 const generateCaptcha = () => {
   const num1 = Math.floor(Math.random() * 10) + 1
   const num2 = Math.floor(Math.random() * 10) + 1
@@ -138,14 +162,14 @@ const generateCaptcha = () => {
   captchaQuestion.value = `${num1} ${op} ${num2} = ?`
   captchaAnswer.value = null
 }
-
 onMounted(generateCaptcha)
 
-// Cek apakah captcha benar
-const isCaptchaCorrect = computed(() => captchaAnswer.value === captchaResult.value)
+const isCaptchaCorrect = computed(
+  () => captchaAnswer.value === captchaResult.value
+)
 
-// Fungsi login
-const handleLogin = () => {
+// 🔹 Fungsi login via REST API
+const handleLogin = async () => {
   error.value = ""
 
   if (!isCaptchaCorrect.value) {
@@ -154,11 +178,28 @@ const handleLogin = () => {
     return
   }
 
-  if (username.value === "admin" && password.value === "1234") {
-    alert("Login berhasil!")
-    generateCaptcha() // captcha otomatis ganti setelah login
-  } else {
-    error.value = "Username atau password salah!"
+  loading.value = true
+  try {
+    const response = await api.post("auth/login", {
+      email: username.value,
+      password: password.value,
+    })
+
+    // console.log(response.data)
+
+    if (response.data.success) {
+      // simpan email ke localStorage
+      localStorage.setItem("otp_email", username.value)
+      router.push("/otp")
+    } else {
+      error.value = response.data.message || "Login gagal!"
+    }
+  } catch (err: any) {
+    error.value =
+      err.response?.data?.message || "Terjadi kesalahan pada server."
+  } finally {
+    loading.value = false
+    generateCaptcha()
   }
 }
 </script>
