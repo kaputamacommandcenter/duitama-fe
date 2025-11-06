@@ -13,8 +13,21 @@
           </p>
         </div>
 
-        <!-- Form Reset Password -->
-        <form @submit.prevent="handleResetPassword">
+        <!-- Jika berhasil reset password -->
+        <div v-if="success" class="text-center animate-fade-in">
+          <p class="text-green-700 font-semibold text-lg mb-3">
+            {{ success }}
+          </p>
+          <RouterLink
+            to="/login"
+            class="text-blue-600 font-semibold hover:underline"
+          >
+            👉 Kembali ke halaman login
+          </RouterLink>
+        </div>
+
+        <!-- Jika belum berhasil -->
+        <form v-else @submit.prevent="handleResetPassword">
           <!-- Password Baru -->
           <div class="form-control mb-3">
             <label class="label">
@@ -43,15 +56,9 @@
             />
           </div>
 
-          <!-- Pesan Error / Sukses -->
+          <!-- Pesan Error -->
           <p v-if="error" class="text-red-600 font-medium text-center mb-2">
             {{ error }}
-          </p>
-          <p
-            v-if="success"
-            class="text-green-600 font-medium text-center mb-2 animate-fade-in"
-          >
-            {{ success }}
           </p>
 
           <!-- Tombol Submit -->
@@ -64,14 +71,14 @@
             <i class="fa-solid fa-unlock-keyhole mr-2"></i>
             {{ isLoading ? "Menyimpan..." : "Reset Password" }}
           </button>
-        </form>
 
-        <!-- Link ke Login -->
-        <div class="text-center mt-4 text-sm">
-          <RouterLink to="/login" class="text-blue-600 hover:underline">
-            Kembali ke halaman login
-          </RouterLink>
-        </div>
+          <!-- Link ke Login -->
+          <div class="text-center mt-4 text-sm">
+            <RouterLink to="/login" class="text-blue-600 hover:underline">
+              Kembali ke halaman login
+            </RouterLink>
+          </div>
+        </form>
       </div>
     </div>
   </AuthLayout>
@@ -113,15 +120,16 @@ const handleResetPassword = async () => {
     const email = route.query.email
 
     const response = await api.post("/auth/reset-password", {
-      token: token,
-      email: email,
+      token,
+      email,
       password: newPassword.value,
       password_confirmation: confirmPassword.value,
     })
 
     if (response.data.success) {
       success.value = "✅ Password berhasil direset! Silakan login kembali."
-      setTimeout(() => router.push("/login"), 1800)
+      // Opsional: redirect otomatis setelah 2 detik
+      setTimeout(() => router.push("/login"), 10000)
     } else {
       error.value = response.data.message || "Gagal mereset password."
     }

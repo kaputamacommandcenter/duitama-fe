@@ -1,14 +1,31 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { api } from '../api/config'
 
-// Gunakan lazy load (dynamic import) untuk efisiensi
+// Daftar route
 const routes = [
-  { path: '/', component: () => import('../pages/LoginPage.vue') },
+  // === Public Routes ===
+  { path: '/', redirect: '/login' },
   { path: '/login', name: 'login', component: () => import('../pages/LoginPage.vue') },
+  { path: '/otp', name: 'otp', component: () => import('../pages/OtpVerification.vue') },
   { path: '/forgot-password', name: 'forgot-password', component: () => import('../pages/ForgotPassword.vue') },
   { path: '/reset-password', name: 'reset-password', component: () => import('../pages/ResetPassword.vue') },
-  { path: '/otp', name: 'otp', component: () => import('../pages/OtpVerification.vue') },
 
-  // Tambahkan route wildcard di paling bawah
+  // === Protected Routes (hanya bisa diakses kalau sudah login) ===
+  {
+    path: '/dashboard',
+    name: 'dashboard',
+    component: () => import('../layouts/DashboardLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'dashboard-home',
+        component: () => import('../pages/DashboardHome.vue'),
+      }
+    ],
+  },
+
+  // === Not Found ===
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
@@ -18,7 +35,51 @@ const routes = [
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+})
+
+/* ============================================================
+   🛡️ ROUTE GUARD UNTUK MELINDUNGI HALAMAN DASHBOARD
+   ============================================================ */
+router.beforeEach(async (to, from, next) => {
+  const token = localStorage.getItem('access_token')
+
+  // Jika route butuh login
+  if (to.meta.requiresAuth) {
+    if (!token) {
+      // Jika belum login → arahkan ke halaman login
+      return next({ name: 'login' })
+    }
+
+    try {
+      // ✅ Verifikasi token ke server (pastikan endpoint ini ada di backend)
+      const res = await api.get('/user', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (res.data.success) {
+        // Jika token valid → lanjut
+        next()
+      } else {
+        // Jika token tidak valid → hapus data & arahkan ke login
+        localStorage.clear()
+        next({ name: 'login' })
+      }
+    } catch (error) {
+      // Jika token tidak valid / request gagal → logout otomatis
+      localStorage.clear()
+      next({ name: 'login' })
+    }
+  } else {
+    // Jika user sudah login tapi buka halaman login → redirect ke dashboard
+    if ((to.name === 'login' || to.name === 'otp') && token) {
+      return next({ name: 'dashboard-home' })
+    }
+
+    next()
+  }
 })
 
 export default router

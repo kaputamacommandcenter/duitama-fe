@@ -125,7 +125,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { api } from "../api/config" // ✅ gunakan konfigurasi axios global
+import { api } from "../api/config"
 import AuthLayout from "../layouts/AuthLayout.vue"
 
 const router = useRouter()
@@ -162,7 +162,18 @@ const generateCaptcha = () => {
   captchaQuestion.value = `${num1} ${op} ${num2} = ?`
   captchaAnswer.value = null
 }
-onMounted(generateCaptcha)
+onMounted(() => {
+  generateCaptcha()
+
+  const saved = localStorage.getItem("rememberMe")
+  const savedUsername = localStorage.getItem("savedUsername")
+
+  if (saved === "true" && savedUsername) {
+    username.value = savedUsername
+    rememberMe.value = true
+  }
+})
+
 
 const isCaptchaCorrect = computed(
   () => captchaAnswer.value === captchaResult.value
@@ -185,23 +196,32 @@ const handleLogin = async () => {
       password: password.value,
     })
 
-    // console.log(response.data)
-
     if (response.data.success) {
-      // simpan email ke localStorage
+      // ✅ Simpan data user sementara (untuk OTP)
       localStorage.setItem("otp_email", username.value)
+
+      // ✅ Simpan preferensi Remember Me
+      if (rememberMe.value) {
+        localStorage.setItem("rememberMe", "true")
+        localStorage.setItem("savedUsername", username.value)
+      } else {
+        localStorage.removeItem("rememberMe")
+        localStorage.removeItem("savedUsername")
+      }
+
+      // Lanjut ke verifikasi OTP
       router.push("/otp")
     } else {
       error.value = response.data.message || "Login gagal!"
     }
   } catch (err: any) {
-    error.value =
-      err.response?.data?.message || "Terjadi kesalahan pada server."
+    error.value = err.response?.data?.message || "Terjadi kesalahan pada server."
   } finally {
     loading.value = false
     generateCaptcha()
   }
 }
+
 </script>
 
 <style scoped>
