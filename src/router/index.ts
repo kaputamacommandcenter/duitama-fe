@@ -56,45 +56,40 @@ const router = createRouter({
 /* ============================================================
    🛡️ ROUTE GUARD UNTUK MELINDUNGI HALAMAN DASHBOARD
    ============================================================ */
-router.beforeEach(async (to, next) => {
+router.beforeEach(async (to) => {
   const token = localStorage.getItem('access_token')
 
   // Jika route butuh login
   if (to.meta.requiresAuth) {
     if (!token) {
-      // Jika belum login → arahkan ke halaman login
-      return next({ name: 'login' })
+      // Belum login → redirect ke halaman login
+      return { name: 'login' }
     }
 
     try {
-      // ✅ Verifikasi token ke server (pastikan endpoint ini ada di backend)
+      // Verifikasi token ke server
       const res = await api.get('/user', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       })
 
-      if (res.data.success) {
-        // Jika token valid → lanjut
-        next()
-      } else {
-        // Jika token tidak valid → hapus data & arahkan ke login
+      if (!res.data.success) {
         localStorage.clear()
-        next({ name: 'login' })
+        return { name: 'login' }
       }
     } catch (error) {
-      // Jika token tidak valid / request gagal → logout otomatis
       localStorage.clear()
-      next({ name: 'login' })
+      return { name: 'login' }
     }
   } else {
-    // Jika user sudah login tapi buka halaman login → redirect ke dashboard
+    // Jika sudah login dan buka halaman login → redirect ke dashboard
     if ((to.name === 'login' || to.name === 'otp') && token) {
-      return next({ name: 'dashboard-home' })
+      return { name: 'dashboard-home' }
     }
-
-    next()
   }
+
+  // Tidak ada masalah → lanjutkan
+  return true
 })
+
 
 export default router
