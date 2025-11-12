@@ -74,6 +74,7 @@ const kategoriList = ref([
   { id: 7, nama: "Biaya Pengembangan D3" },
   { id: 8, nama: "Biaya MOMB" },
   { id: 9, nama: "Biaya Seragam (2 buah)" },
+  { id: 10, nama: "UKT S1 BD" },
 ])
 
 // Fungsi tombol aksi

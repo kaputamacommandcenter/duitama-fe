@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-screen bg-gradient-to-br from-sky-50 via-emerald-50 to-blue-100 overflow-hidden">
+  <div class="flex h-screen bg-linear-to-br from-sky-50 via-emerald-50 to-blue-100 overflow-hidden">
     <Sidebar
       :is-sidebar-open="isSidebarOpen"
       :window-width="windowWidth"
@@ -35,7 +35,7 @@
             class="flex items-center space-x-2 hover:bg-sky-50 px-3 py-2 rounded-lg transition"
           >
             <div
-              class="bg-gradient-to-br from-sky-100 to-emerald-100 w-9 h-9 rounded-full border border-sky-200 flex items-center justify-center"
+              class="bg-linear-to-br from-sky-100 to-emerald-100 w-9 h-9 rounded-full border border-sky-200 flex items-center justify-center"
             >
               <i class="fa fa-user text-sky-700"></i>
             </div>

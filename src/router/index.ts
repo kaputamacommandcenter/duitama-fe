@@ -33,6 +33,11 @@ const routes = [
         component: () => import('../pages/manajemen/ItemPembayaranPage.vue'),
       },
       {
+        path: 'potongan',
+        name: 'potongan',
+        component: () => import('../pages/manajemen/PotonganPage.vue'),
+      },
+      {
         path: 'profile',
         name: 'profile',
         component: () => import('../pages/ProfilePage.vue'),

@@ -9,9 +9,6 @@
           <img src="/duitama-logo.png" alt="DUITAMA" class="size-40" />
         </div>
 
-        <!-- 🔹 Tombol Install PWA -->
-        <InstallPWAButton class="mb-4 w-full justify-center" />
-
         <!-- Form Login -->
         <form @submit.prevent="handleLogin">
           <!-- Username -->
@@ -116,6 +113,9 @@
             {{ error }}
           </p>
         </form>
+        
+        <!-- 🔹 Tombol Install PWA -->
+        <InstallPWAButton class="mb-4 w-full justify-center" />
       </div>
     </div>
   </AuthLayout>
