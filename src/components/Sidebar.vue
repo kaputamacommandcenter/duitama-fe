@@ -3,7 +3,7 @@
   <transition name="slide">
     <aside
       v-show="isSidebarOpen || windowWidth >= 768"
-      class="fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-sky-700 via-sky-600 to-emerald-600 text-white shadow-2xl z-40 md:static md:flex md:flex-col transition-all duration-300"
+      class="fixed inset-y-0 left-0 w-64 bg-linear-to-b from-sky-700 via-sky-600 to-emerald-600 text-white shadow-2xl z-40 md:static md:flex md:flex-col transition-all duration-300"
     >
       <!-- Header -->
       <div class="p-4 flex items-center justify-between md:justify-start border-b border-white/20">
@@ -19,17 +19,16 @@
         </button>
       </div>
 
-      <!-- Navigasi berbasis Array -->
+      <!-- Navigasi -->
       <nav class="mt-4 space-y-2 px-2">
         <template v-for="item in menuItems" :key="item.id">
-          <!-- Item Menu Tunggal (Tidak punya children/submenu) -->
+          <!-- Item Tunggal -->
           <RouterLink
             v-if="!item.children"
-            :to="item.link"
+            :to="item.link ?? '/'"
             class="flex items-center px-3 py-2 rounded-lg transition-all duration-200"
             :class="[
               activeClass(item.link),
-              // Kelas non-aktif untuk link tunggal
               route.path !== item.link ? 'text-white/90 hover:text-white hover:bg-white/10' : ''
             ]"
             @click="$emit('close-sidebar')"
@@ -37,15 +36,16 @@
             <i :class="[item.icon, 'w-5 mr-3']"></i> {{ item.name }}
           </RouterLink>
 
-          <!-- Item Menu dengan Submenu (children) -->
+          <!-- Item dengan Submenu -->
           <div v-else>
             <button
               @click="toggleMenu(item.id)"
               class="w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200"
               :class="[
-                // Warna background dan font-weight untuk status terbuka/aktif parent
                 { 'bg-white/20': openMenu === item.id },
-                isParentActive(item.children) ? 'bg-white text-sky-700 font-bold shadow-inner' : 'hover:bg-white/10' // Kunci: Terapkan kelas aktif di sini
+                isParentActive(item.children)
+                  ? 'bg-white text-sky-700 font-bold shadow-inner'
+                  : 'hover:bg-white/10'
               ]"
             >
               <div class="flex items-center">
@@ -60,16 +60,18 @@
 
             <!-- Submenu -->
             <transition name="fade">
-              <div v-if="openMenu === item.id || isParentActive(item.children)" class="ml-8 mt-1 space-y-1">
+              <div
+                v-if="openMenu === item.id || isParentActive(item.children)"
+                class="ml-8 mt-1 space-y-1"
+              >
                 <RouterLink
                   v-for="subitem in item.children"
                   :key="subitem.id"
-                  :to="subitem.link"
+                  :to="subitem.link ?? '/'"
                   class="block px-3 py-1.5 rounded-lg transition"
                   :class="[
-                      activeClass(subitem.link),
-                      // Kelas non-aktif untuk link submenu
-                      route.path !== subitem.link ? 'text-white/90 hover:bg-white/20' : ''
+                    activeClass(subitem.link),
+                    route.path !== subitem.link ? 'text-white/90 hover:bg-white/20' : ''
                   ]"
                   @click="$emit('close-sidebar')"
                 >
@@ -81,7 +83,7 @@
         </template>
       </nav>
 
-      <!-- Tombol logout (mobile) -->
+      <!-- Tombol Logout (mobile) -->
       <div class="mt-auto p-4 md:hidden border-t border-white/20">
         <button
           @click="$emit('logout')"
@@ -95,12 +97,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineEmits, computed, onMounted } from "vue"
+import { ref, defineProps, defineEmits, onMounted } from "vue"
 import { useRoute } from "vue-router"
 
 const route = useRoute()
 
-// Definisikan tipe untuk item menu
+// Tipe data menu
 interface MenuItem {
   id: string
   name: string
@@ -109,7 +111,7 @@ interface MenuItem {
   children?: MenuItem[]
 }
 
-// 1. Array Menu untuk Sidebar
+// Data menu utama
 const menuItems: MenuItem[] = [
   {
     id: "beranda",
@@ -142,28 +144,24 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
-  // Anda bisa menambahkan menu lain di sini
 ]
 
-// Definisikan props dari DashboardLayout
+// Props dan emits
 const props = defineProps<{
   isSidebarOpen: boolean
   windowWidth: number
 }>()
 
-// Definisikan event yang akan di-emit ke DashboardLayout
 const emit = defineEmits(["close-sidebar", "logout"])
 
-// State untuk menu yang sedang terbuka
-const openMenu = ref("")
+const openMenu = ref<string>("")
 
-// Buka menu induk secara default jika salah satu sub-itemnya aktif saat load
+// Otomatis buka menu aktif
 onMounted(() => {
   const currentPath = route.path
-  
   for (const parent of menuItems) {
     if (parent.children) {
-      const isActive = parent.children.some(child => child.link === currentPath)
+      const isActive = parent.children.some((child) => child.link === currentPath)
       if (isActive) {
         openMenu.value = parent.id
         break
@@ -172,28 +170,25 @@ onMounted(() => {
   }
 })
 
-// Fungsi untuk menentukan kelas aktif pada item menu
-const activeClass = (path: string) => {
-  // Kelas untuk link aktif: latar putih, teks biru tua yang kontras
-  return route.path === path
-    ? "bg-white text-sky-700 font-bold shadow-inner" // KELAS AKTIF SAJA
-    : ""; // Mengembalikan string kosong jika tidak aktif
+// Kelas aktif
+const activeClass = (path?: string): string => {
+  if (!path) return ""
+  return route.path === path ? "bg-white text-sky-700 font-bold shadow-inner" : ""
 }
 
-// Fungsi untuk membuka/menutup dropdown menu sidebar
+// Toggle dropdown
 const toggleMenu = (menuId: string) => {
   openMenu.value = openMenu.value === menuId ? "" : menuId
 }
 
-// Fungsi untuk mengecek apakah salah satu anak (children) dari menu parent aktif
-const isParentActive = (children: MenuItem[] | undefined): boolean => {
-    if (!children) return false;
-    return children.some(child => route.path === child.link);
+// Cek apakah parent aktif
+const isParentActive = (children?: MenuItem[]): boolean => {
+  if (!children) return false
+  return children.some((child) => route.path === child.link)
 }
 </script>
 
 <style scoped>
-/* Transisi yang sama dari DashboardLayout */
 .slide-enter-active,
 .slide-leave-active {
   transition: transform 0.3s ease;
