@@ -117,6 +117,15 @@
             {{ error }}
           </p>
         </form>
+        <!-- Tombol Install PWA -->
+        <button
+          v-if="showInstallButton"
+          class="btn btn-outline btn-primary mb-4 w-full flex items-center justify-center gap-2"
+          @click="installApp"
+        >
+          <i class="fa-solid fa-download"></i>
+          <span>Install Aplikasi DUITAMA</span>
+        </button>
       </div>
     </div>
   </AuthLayout>
@@ -140,6 +149,43 @@ const captchaQuestion = ref("")
 const captchaResult = ref(0)
 const captchaAnswer = ref<number | null>(null)
 
+// ✅ PWA Install Handling
+const deferredPrompt = ref<any>(null)
+const showInstallButton = ref(false)
+
+const installApp = async () => {
+  if (!deferredPrompt.value) return
+  deferredPrompt.value.prompt()
+  const { outcome } = await deferredPrompt.value.userChoice
+  console.log(`User response to install: ${outcome}`)
+  deferredPrompt.value = null
+  showInstallButton.value = false
+}
+
+// 🔹 Tangkap event install prompt
+onMounted(() => {
+  window.addEventListener("beforeinstallprompt", (e: Event) => {
+    e.preventDefault()
+    deferredPrompt.value = e
+    showInstallButton.value = true
+  })
+
+  window.addEventListener("appinstalled", () => {
+    console.log("Aplikasi DUITAMA sudah terinstal ✅")
+    showInstallButton.value = false
+  })
+
+  generateCaptcha()
+
+  const saved = localStorage.getItem("rememberMe")
+  const savedUsername = localStorage.getItem("savedUsername")
+
+  if (saved === "true" && savedUsername) {
+    username.value = savedUsername
+    rememberMe.value = true
+  }
+})
+
 // 🔹 Generate captcha
 const generateCaptcha = () => {
   const num1 = Math.floor(Math.random() * 10) + 1
@@ -162,18 +208,6 @@ const generateCaptcha = () => {
   captchaQuestion.value = `${num1} ${op} ${num2} = ?`
   captchaAnswer.value = null
 }
-onMounted(() => {
-  generateCaptcha()
-
-  const saved = localStorage.getItem("rememberMe")
-  const savedUsername = localStorage.getItem("savedUsername")
-
-  if (saved === "true" && savedUsername) {
-    username.value = savedUsername
-    rememberMe.value = true
-  }
-})
-
 
 const isCaptchaCorrect = computed(
   () => captchaAnswer.value === captchaResult.value
@@ -221,7 +255,6 @@ const handleLogin = async () => {
     generateCaptcha()
   }
 }
-
 </script>
 
 <style scoped>
