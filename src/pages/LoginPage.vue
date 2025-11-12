@@ -9,6 +9,9 @@
           <img src="/duitama-logo.png" alt="DUITAMA" class="size-40" />
         </div>
 
+        <!-- 🔹 Tombol Install PWA -->
+        <InstallPWAButton class="mb-4 w-full justify-center" />
+
         <!-- Form Login -->
         <form @submit.prevent="handleLogin">
           <!-- Username -->
@@ -101,11 +104,7 @@
             class="btn w-full text-white font-semibold"
             type="submit"
             :disabled="loading || !isCaptchaCorrect"
-            :class="
-              isCaptchaCorrect
-                ? 'btn-primary'
-                : 'btn-disabled bg-gray-400 cursor-not-allowed'
-            "
+            :class="isCaptchaCorrect ? 'btn-primary' : 'btn-disabled bg-gray-400 cursor-not-allowed'"
           >
             <i v-if="!loading" class="fa-solid fa-right-to-bracket mr-2"></i>
             <span v-if="loading" class="loading loading-spinner mr-2"></span>
@@ -117,15 +116,6 @@
             {{ error }}
           </p>
         </form>
-        <!-- Tombol Install PWA -->
-        <button
-          v-if="showInstallButton"
-          class="btn btn-outline btn-primary mb-4 w-full flex items-center justify-center gap-2"
-          @click="installApp"
-        >
-          <i class="fa-solid fa-download"></i>
-          <span>Install Aplikasi DUITAMA</span>
-        </button>
       </div>
     </div>
   </AuthLayout>
@@ -136,6 +126,7 @@ import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { api } from "../api/config"
 import AuthLayout from "../layouts/AuthLayout.vue"
+import InstallPWAButton from "../components/InstallPWAButton.vue"
 
 const router = useRouter()
 
@@ -149,44 +140,7 @@ const captchaQuestion = ref("")
 const captchaResult = ref(0)
 const captchaAnswer = ref<number | null>(null)
 
-// ✅ PWA Install Handling
-const deferredPrompt = ref<any>(null)
-const showInstallButton = ref(false)
-
-const installApp = async () => {
-  if (!deferredPrompt.value) return
-  deferredPrompt.value.prompt()
-  const { outcome } = await deferredPrompt.value.userChoice
-  console.log(`User response to install: ${outcome}`)
-  deferredPrompt.value = null
-  showInstallButton.value = false
-}
-
-// 🔹 Tangkap event install prompt
-onMounted(() => {
-  window.addEventListener("beforeinstallprompt", (e: Event) => {
-    e.preventDefault()
-    deferredPrompt.value = e
-    showInstallButton.value = true
-  })
-
-  window.addEventListener("appinstalled", () => {
-    console.log("Aplikasi DUITAMA sudah terinstal ✅")
-    showInstallButton.value = false
-  })
-
-  generateCaptcha()
-
-  const saved = localStorage.getItem("rememberMe")
-  const savedUsername = localStorage.getItem("savedUsername")
-
-  if (saved === "true" && savedUsername) {
-    username.value = savedUsername
-    rememberMe.value = true
-  }
-})
-
-// 🔹 Generate captcha
+// 🔹 Captcha Generator
 const generateCaptcha = () => {
   const num1 = Math.floor(Math.random() * 10) + 1
   const num2 = Math.floor(Math.random() * 10) + 1
@@ -194,26 +148,28 @@ const generateCaptcha = () => {
   const op = ops[Math.floor(Math.random() * ops.length)]
 
   switch (op) {
-    case "+":
-      captchaResult.value = num1 + num2
-      break
-    case "-":
-      captchaResult.value = num1 - num2
-      break
-    case "*":
-      captchaResult.value = num1 * num2
-      break
+    case "+": captchaResult.value = num1 + num2; break
+    case "-": captchaResult.value = num1 - num2; break
+    case "*": captchaResult.value = num1 * num2; break
   }
 
   captchaQuestion.value = `${num1} ${op} ${num2} = ?`
   captchaAnswer.value = null
 }
 
-const isCaptchaCorrect = computed(
-  () => captchaAnswer.value === captchaResult.value
-)
+const isCaptchaCorrect = computed(() => captchaAnswer.value === captchaResult.value)
 
-// 🔹 Fungsi login via REST API
+onMounted(() => {
+  generateCaptcha()
+  const saved = localStorage.getItem("rememberMe")
+  const savedUsername = localStorage.getItem("savedUsername")
+  if (saved === "true" && savedUsername) {
+    username.value = savedUsername
+    rememberMe.value = true
+  }
+})
+
+// 🔹 Login Function
 const handleLogin = async () => {
   error.value = ""
 
@@ -231,10 +187,8 @@ const handleLogin = async () => {
     })
 
     if (response.data.success) {
-      // ✅ Simpan data user sementara (untuk OTP)
       localStorage.setItem("otp_email", username.value)
 
-      // ✅ Simpan preferensi Remember Me
       if (rememberMe.value) {
         localStorage.setItem("rememberMe", "true")
         localStorage.setItem("savedUsername", username.value)
@@ -243,7 +197,6 @@ const handleLogin = async () => {
         localStorage.removeItem("savedUsername")
       }
 
-      // Lanjut ke verifikasi OTP
       router.push("/otp")
     } else {
       error.value = response.data.message || "Login gagal!"
