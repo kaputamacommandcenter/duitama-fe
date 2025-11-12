@@ -31,7 +31,7 @@
               class="flex justify-center gap-2 sm:gap-3 mb-3 flex-wrap sm:flex-nowrap"
             >
               <input
-                v-for="(digit, index) in otpDigits"
+                v-for="(index) in otpDigits"
                 :key="index"
                 v-model="otp[index]"
                 type="text"

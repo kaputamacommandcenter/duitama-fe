@@ -21,7 +21,22 @@ const routes = [
         path: '',
         name: 'dashboard-home',
         component: () => import('../pages/DashboardHome.vue'),
-      }
+      },
+      {
+        path: 'kategori',
+        name: 'kategori',
+        component: () => import('../pages/manajemen/KategoriPage.vue'),
+      },
+      {
+        path: 'item',
+        name: 'item-pembayaran',
+        component: () => import('../pages/manajemen/ItemPembayaranPage.vue'),
+      },
+      {
+        path: 'profile',
+        name: 'profile',
+        component: () => import('../pages/ProfilePage.vue'),
+      },
     ],
   },
 
@@ -41,7 +56,7 @@ const router = createRouter({
 /* ============================================================
    🛡️ ROUTE GUARD UNTUK MELINDUNGI HALAMAN DASHBOARD
    ============================================================ */
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, next) => {
   const token = localStorage.getItem('access_token')
 
   // Jika route butuh login
