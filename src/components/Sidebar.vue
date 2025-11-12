@@ -1,11 +1,9 @@
 <template>
-  <!-- Sidebar -->
   <transition name="slide">
     <aside
       v-show="isSidebarOpen || windowWidth >= 768"
-      class="fixed inset-y-0 left-0 w-64 bg-linear-to-b from-sky-700 via-sky-600 to-emerald-600 text-white shadow-2xl z-40 md:static md:flex md:flex-col transition-all duration-300"
+      class="fixed inset-y-0 left-0 w-64 bg-linear-to-b from-sky-700 via-sky-600 to-emerald-600 text-white shadow-2xl z-40 md:static md:flex md:flex-col"
     >
-      <!-- Header -->
       <div class="p-4 flex items-center justify-between md:justify-start border-b border-white/20">
         <div class="flex items-center space-x-2">
           <img src="/duitama-logo.png" alt="DUITAMA" class="w-9 h-9 drop-shadow-md" />
@@ -19,10 +17,8 @@
         </button>
       </div>
 
-      <!-- Navigasi -->
       <nav class="mt-4 space-y-2 px-2">
         <template v-for="item in menuItems" :key="item.id">
-          <!-- Item Tunggal -->
           <RouterLink
             v-if="!item.children"
             :to="item.link ?? '/'"
@@ -36,7 +32,6 @@
             <i :class="[item.icon, 'w-5 mr-3']"></i> {{ item.name }}
           </RouterLink>
 
-          <!-- Item dengan Submenu -->
           <div v-else>
             <button
               @click="toggleMenu(item.id)"
@@ -58,7 +53,6 @@
               ></i>
             </button>
 
-            <!-- Submenu -->
             <transition name="fade">
               <div
                 v-if="openMenu === item.id || isParentActive(item.children)"
@@ -83,7 +77,6 @@
         </template>
       </nav>
 
-      <!-- Tombol Logout (mobile) -->
       <div class="mt-auto p-4 md:hidden border-t border-white/20">
         <button
           @click="$emit('logout')"
@@ -146,8 +139,8 @@ const menuItems: MenuItem[] = [
   },
 ]
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const props = defineProps<{
+// PERBAIKAN 1: Hapus `const props` dan `eslint-disable`
+defineProps<{
   isSidebarOpen: boolean
   windowWidth: number
 }>()
@@ -199,11 +192,11 @@ const isParentActive = (children?: MenuItem[]): boolean => {
 }
 
 .fade-enter-active,
-.fade-leave-active {
+.slide-leave-active {
   transition: opacity 0.5s ease, transform 0.4s ease;
 }
 .fade-enter-from,
-.fade-leave-to {
+.slide-leave-to {
   opacity: 0;
   transform: translateY(-8px);
 }
