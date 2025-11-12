@@ -146,7 +146,7 @@ const menuItems: MenuItem[] = [
   },
 ]
 
-// Props dan emits
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const props = defineProps<{
   isSidebarOpen: boolean
   windowWidth: number
