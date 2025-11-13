@@ -38,6 +38,11 @@ const routes = [
         component: () => import('../pages/manajemen/PotonganPage.vue'),
       },
       {
+        path: 'skema-pembayaran',
+        name: 'skema-pembayaran',
+        component: () => import('../pages/manajemen/SkemaPembayaranPage.vue'),
+      },
+      {
         path: 'profile',
         name: 'profile',
         component: () => import('../pages/ProfilePage.vue'),

@@ -106,35 +106,15 @@ interface MenuItem {
 
 // Data menu utama
 const menuItems: MenuItem[] = [
+  {id: "beranda",name: "Beranda",icon: "fa-solid fa-house",link: "/dashboard"},
   {
-    id: "beranda",
-    name: "Beranda",
-    icon: "fa-solid fa-house",
-    link: "/dashboard",
-  },
-  {
-    id: "pembayaran",
-    name: "Manajemen Pembayaran",
-    icon: "fa-solid fa-credit-card",
+    id: "pembayaran", name: "Manajemen Pembayaran", icon: "fa-solid fa-credit-card",
     children: [
-      {
-        id: "kategori",
-        name: "Kategori",
-        icon: "fa-solid fa-layer-group",
-        link: "/dashboard/kategori",
-      },
-      {
-        id: "item",
-        name: "Item Pembayaran",
-        icon: "fa-solid fa-list",
-        link: "/dashboard/item",
-      },
-      {
-        id: "potongan",
-        name: "Potongan",
-        icon: "fa-solid fa-tag",
-        link: "/dashboard/potongan",
-      },
+      {id: "kategori",name: "Kategori",icon: "fa-solid fa-layer-group",link: "/dashboard/kategori"},
+      {id: "item",name: "Item Pembayaran",icon: "fa-solid fa-list",link: "/dashboard/item"},
+      {id: "potongan",name: "Potongan",icon: "fa-solid fa-tag",link: "/dashboard/potongan"},
+      {id: "kelompok",name: "Kelompok",icon: "fa-solid fa-users",link: "/dashboard/kelompok"},
+      {id: "skema-pembayaran",name: "Skema Pembayaran",icon: "fa-solid fa-scale-balanced",link: "/dashboard/skema-pembayaran"},
     ],
   },
 ]
