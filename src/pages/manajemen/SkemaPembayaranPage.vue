@@ -48,10 +48,10 @@
 import { ref } from "vue"
 
 const skemaPembayaranList = ref([
-  {id: 1, namaKelompok: "SI-2025-Pagi-Reguler", kategori: "UKT S1 Pagi", namaPotongan: "-"},
-  {id: 2, namaKelompok: "SI-2025-Pagi-Reguler", kategori: "Biaya Pengembangan S1 (Pagi/Sore)", namaPotongan: "-"},
-  {id: 3, namaKelompok: "SI-2025-Pagi-Reguler", kategori: "Biaya MOMB", namaPotongan: "-"},
-  {id: 4, namaKelompok: "SI-2025-Pagi-Reguler", kategori: "Biaya Seragam (2 buah)", namaPotongan: "-"}
+  {id: 1, namaKelompok: "SI&TI 2025 Pagi", kategori: "UKT S1 SI&TI Pagi", namaPotongan: "-"},
+  {id: 2, namaKelompok: "SI&TI 2025 Pagi", kategori: "Biaya Pengembangan S1 (Pagi/Sore)", namaPotongan: "-"},
+  {id: 3, namaKelompok: "SI&TI 2025 Pagi", kategori: "Biaya MOMB", namaPotongan: "-"},
+  {id: 4, namaKelompok: "SI&TI 2025 Pagi", kategori: "Biaya Seragam (2 buah)", namaPotongan: "-"}
 ])
 
 const tambahPotongan = () => {

@@ -43,6 +43,16 @@ const routes = [
         component: () => import('../pages/manajemen/SkemaPembayaranPage.vue'),
       },
       {
+        path: 'kelompok',
+        name: 'kelompok',
+        component: () => import('../pages/manajemen/KelompokPage.vue'),
+      },
+      {
+        path: 'kelompok/detail/:id',
+        name: 'detail-kelompok',
+        component: () => import('../pages/manajemen/KelompokDetailPage.vue'),
+      },
+      {
         path: 'profile',
         name: 'profile',
         component: () => import('../pages/ProfilePage.vue'),
