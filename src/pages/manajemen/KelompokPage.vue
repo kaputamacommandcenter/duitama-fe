@@ -33,7 +33,7 @@
             >
               <td class="text-center">{{ index + 1 }}</td>
               <td>
-                <RouterLink :to="`kelompok/detail/${kelompok.nama}`" class="text-blue-600 hover:underline">
+                <RouterLink :to="`kelompok/detail/${kelompok.id}`" class="text-blue-600 hover:underline">
                 {{ kelompok.nama }}
                 </RouterLink>
               </td>

@@ -75,38 +75,42 @@
         </div>
       </header>
 
-      <main class="flex-1 overflow-y-auto px-6 py-4">
-        <transition name="fade" mode="out-in">
-          <div
-            :key="route.fullPath"
-            class="text-sm breadcrumbs mb-5 p-3 rounded-xl bg-white/60 backdrop-blur-md border border-sky-200 shadow-sm"
-          >
-            <ul class="text-sky-700 font-medium">
-              <li>
-                <RouterLink to="/dashboard" class="hover:text-emerald-600 transition">
-                  <i class="fa-solid fa-house mr-1 text-sky-600"></i> Beranda
-                </RouterLink>
-              </li>
-              <li v-for="(item, i) in breadcrumbs" :key="i">
-                <RouterLink
-                  v-if="item.link"
-                  :to="item.link"
-                  class="capitalize hover:text-emerald-600 transition"
-                >
-                  {{ item.name }}
-                </RouterLink>
-                <span v-else class="capitalize text-sky-900 font-semibold">
-                  {{ item.name }}
-                </span>
-              </li>
-            </ul>
-          </div>
-        </transition>
+<main class="flex-1 overflow-y-auto px-6 py-4">
+  <!-- Breadcrumbs tetap di div terpisah -->
+  <div
+    :key="route.fullPath"
+    class="text-sm breadcrumbs mb-5 p-3 rounded-xl bg-white/60 backdrop-blur-md border border-sky-200 shadow-sm"
+  >
+    <ul class="text-sky-700 font-medium">
+      <li>
+        <RouterLink to="/dashboard" class="hover:text-emerald-600 transition">
+          <i class="fa-solid fa-house mr-1 text-sky-600"></i> Beranda
+        </RouterLink>
+      </li>
+      <li v-for="(item, i) in breadcrumbs" :key="i">
+        <RouterLink
+          v-if="item.link"
+          :to="item.link"
+          class="capitalize hover:text-emerald-600 transition"
+        >
+          {{ item.name }}
+        </RouterLink>
+        <span v-else class="capitalize text-sky-900 font-semibold">
+          {{ item.name }}
+        </span>
+      </li>
+    </ul>
+  </div>
 
-        <transition name="fade" mode="out-in">
-          <router-view :key="route.fullPath" />
-        </transition>
-      </main>
+  <!-- Router-view dengan transition -->
+  <router-view v-slot="{ Component }">
+    <transition name="fade" mode="out-in">
+      <component :is="Component" :key="route.fullPath" />
+    </transition>
+  </router-view>
+</main>
+
+
 
       <footer class="bg-white/60 backdrop-blur-md shadow-md p-4">
         <p class="text-sm text-sky-700">
@@ -142,6 +146,12 @@ const windowWidth = ref(window.innerWidth)
 
 // breadcrumb dinamis
 const breadcrumbs = computed(() => {
+  // Jika halaman punya breadcrumb custom dari meta
+  if (route.meta.breadcrumb) {
+    return route.meta.breadcrumb
+  }
+
+  // Jika tidak ada, gunakan auto-generator seperti sekarang
   const segments = route.path.split("/").filter(Boolean)
   const paths: { name: string; link?: string }[] = []
 
@@ -153,6 +163,7 @@ const breadcrumbs = computed(() => {
 
   return paths
 })
+
 
 // logout
 const handleLogout = async () => {
