@@ -141,28 +141,35 @@ const isDropdownOpen = ref(false)
 const userName = ref(localStorage.getItem("name") || "")
 const windowWidth = ref(window.innerWidth)
 
-// Fungsi `activeClass` dan `toggleMenu` dipindahkan ke Sidebar.vue
-// Variabel `openMenu` juga dipindahkan ke Sidebar.vue
+interface BreadcrumbItem {
+  name: string
+  link?: string
+}
 
-// breadcrumb dinamis
-const breadcrumbs = computed(() => {
-  // Jika halaman punya breadcrumb custom dari meta
+
+const breadcrumbs = computed<BreadcrumbItem[]>(() => {
+  // Jika route punya meta breadcrumb
   if (route.meta.breadcrumb) {
-    return route.meta.breadcrumb
+    return route.meta.breadcrumb as BreadcrumbItem[]
   }
 
-  // Jika tidak ada, gunakan auto-generator seperti sekarang
+  // Auto generate breadcrumb
   const segments = route.path.split("/").filter(Boolean)
-  const paths: { name: string; link?: string }[] = []
+  const paths: BreadcrumbItem[] = []
 
   segments.forEach((segment, index) => {
     const path = "/" + segments.slice(0, index + 1).join("/")
     const name = segment.replace(/-/g, " ")
-    paths.push({ name, link: index < segments.length - 1 ? path : undefined })
+
+    paths.push({
+      name,
+      link: index < segments.length - 1 ? path : undefined,
+    })
   })
 
   return paths
 })
+
 
 
 // logout
