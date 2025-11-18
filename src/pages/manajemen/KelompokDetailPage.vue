@@ -119,7 +119,9 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import Swal from "sweetalert2";
-import { sia } from "../../api/sia"; 
+import { sia } from "../../api/sia";
+// Menggunakan import yang disediakan user
+import { showLoading, hideLoading } from "../../stores/loading" 
 
 /* ===== STATE ===== */
 const currentUsers = ref([]);
@@ -137,7 +139,7 @@ const initialCurrentUsers = [
 
 /* ===== COMPUTED & FILTERING ===== */
 
-// Filtered List Current Users (LOGIKA TETAP)
+// Filtered List Current Users (TETAP)
 const filteredCurrent = computed(() =>
   currentUsers.value.filter((u) => {
     const term = searchCurrent.value.toLowerCase();
@@ -149,25 +151,24 @@ const filteredCurrent = computed(() =>
   })
 );
 
-// Filtered List Potential Users (LOGIKA DIPERBARUI)
+// Filtered List Potential Users (DIPERBAIKI)
 const filteredPotential = computed(() => {
-  const term = searchPotential.value.toLowerCase().trim();
-  
-  // Jika kolom pencarian kosong, KEMBALIKAN ARRAY KOSONG.
-  // Ini memastikan daftar Potential Users hanya terisi saat user mencari.
-  if (!term) return []; 
+    const term = searchPotential.value.toLowerCase().trim();
+    
+    // *** PERBAIKAN: Jika term pencarian kosong, kembalikan array kosong. ***
+    if (!term) return []; 
 
-  // Jika ada term pencarian, lakukan filter
-  return (potentialUsers.value || []).filter((u) => {
-    return (
-      u.npm.toLowerCase().includes(term) ||
-      u.nama_lengkap.toLowerCase().includes(term) ||
-      String(u.angkatan).includes(term)
-    );
-  });
+    // Jika ada term pencarian, lakukan filter terhadap potentialUsers yang sudah diambil dari API.
+    return (potentialUsers.value || []).filter((u) => {
+        return (
+            u.npm.toLowerCase().includes(term) ||
+            u.nama_lengkap.toLowerCase().includes(term) ||
+            String(u.angkatan).includes(term)
+        );
+    });
 });
 
-/* ===== MOVE USERS (ADD/REMOVE) DENGAN SWEETALERT2 (LOGIKA TETAP) ===== */
+/* ===== MOVE USERS (ADD/REMOVE) DENGAN SWEETALERT2 (TETAP) ===== */
 
 async function addSelected() {
     if (selectedPotential.value.length === 0) {
@@ -229,9 +230,10 @@ async function removeSelected() {
     }
 }
 
-/* ===== FUNGSI API (LOGIKA TETAP) ===== */
+/* ===== FUNGSI API (TETAP) ===== */
 
 async function fetchPotentialUsers() {
+    showLoading("Singkronisasi Data Mahasiswa...")
     let allUsers = [];
     try {
         const response = await sia.get("/users");
@@ -244,16 +246,17 @@ async function fetchPotentialUsers() {
             { id: 5, npm: "20311050", nama_lengkap: "Dian Permata", angkatan: "2024" },
             { id: 6, npm: "20311051", nama_lengkap: "Eka Setiawan", angkatan: "2024" },
         ];
+    } finally {
+      hideLoading()
     }
     
     const currentIds = new Set(currentUsers.value.map(u => u.id));
 
-    // Simpan semua user yang bukan current user ke state potentialUsers. 
-    // Daftar yang ditampilkan di select box dikontrol oleh filteredPotential.
+    // Data semua potential user disimpan di sini
     potentialUsers.value = allUsers.filter(u => !currentIds.has(u.id));
 }
 
-/* ===== LIFECYCLE HOOKS (LOGIKA TETAP) ===== */
+/* ===== LIFECYCLE HOOKS (TETAP) ===== */
 onMounted(() => {
     currentUsers.value = initialCurrentUsers; 
     fetchPotentialUsers();

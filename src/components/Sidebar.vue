@@ -117,6 +117,13 @@ const menuItems: MenuItem[] = [
       {id: "skema-pembayaran",name: "Skema Pembayaran",icon: "fa-solid fa-scale-balanced",link: "/dashboard/skema-pembayaran"},
     ],
   },
+  {
+    id: "master-data", name: "Master Data", icon: "fa-solid fa-database",
+    children: [
+      {id: "data-mahasiswa",name: "Data Mahasiswa",icon: "fa-solid fa-user-graduate",link: "/dashboard/data-mahasiswa"},
+      {id: "program-studi",name: "Program Studi",icon: "fa-solid fa-graduation-cap",link: "/dashboard/program-studi"},
+    ],
+  },
 ]
 
 // PERBAIKAN 1: Hapus `const props` dan `eslint-disable`

@@ -14,9 +14,7 @@ const routes = [
   // PROTECTED ROUTES
   // =======================================================
   {
-    path: '/dashboard',
-    name: 'dashboard',
-    component: () => import('../layouts/DashboardLayout.vue'),
+    path: '/dashboard', name: 'dashboard', component: () => import('../layouts/DashboardLayout.vue'),
     meta: {
       requiresAuth: true,
       breadcrumb: [
@@ -24,24 +22,38 @@ const routes = [
       ]
     },
     children: [
-
       // Home
       {
-        path: '',
-        name: 'dashboard-home',
-        component: () => import('../pages/DashboardHome.vue'),
+        path: '', name: 'dashboard-home', component: () => import('../pages/DashboardHome.vue'),
         meta: {
           breadcrumb: [
             { name: "Dashboard" }
           ]
         }
       },
+      {
+        path: 'data-mahasiswa', name: 'data-mahasiswa', component: () => import('../pages/DataMahasiswaPage.vue'),
+        meta: {
+          breadcrumb: [
+            { name: "Dashboard", link: "/dashboard" },
+            { name: "Data Mahasiswa" }
+          ]
+        }
+      },
+      {
+        path: 'detail-pembayaran/:npm', name: 'detail-pembayaran', component: () => import('../pages/DetailPembayaranPage.vue'),
+        meta: {
+          breadcrumb: [
+            { name: "Dashboard", link: "/dashboard" },
+            { name: "Data Mahasiswa", link: "/dashboard/data-mahasiswa" },
+            { name: "Detail Pembayaran" }
+          ]
+        }
+      },
 
       // Kategori
       {
-        path: 'kategori',
-        name: 'kategori',
-        component: () => import('../pages/manajemen/KategoriPage.vue'),
+        path: 'kategori', name: 'kategori', component: () => import('../pages/manajemen/KategoriPage.vue'),
         meta: {
           breadcrumb: [
             { name: "Dashboard", link: "/dashboard" },
@@ -52,9 +64,7 @@ const routes = [
 
       // Item Pembayaran
       {
-        path: 'item',
-        name: 'item-pembayaran',
-        component: () => import('../pages/manajemen/ItemPembayaranPage.vue'),
+        path: 'item', name: 'item-pembayaran', component: () => import('../pages/manajemen/ItemPembayaranPage.vue'),
         meta: {
           breadcrumb: [
             { name: "Dashboard", link: "/dashboard" },
@@ -65,9 +75,7 @@ const routes = [
 
       // Potongan
       {
-        path: 'potongan',
-        name: 'potongan',
-        component: () => import('../pages/manajemen/PotonganPage.vue'),
+        path: 'potongan', name: 'potongan',component: () => import('../pages/manajemen/PotonganPage.vue'),
         meta: {
           breadcrumb: [
             { name: "Dashboard", link: "/dashboard" },
@@ -78,9 +86,7 @@ const routes = [
 
       // Skema Pembayaran
       {
-        path: 'skema-pembayaran',
-        name: 'skema-pembayaran',
-        component: () => import('../pages/manajemen/SkemaPembayaranPage.vue'),
+        path: 'skema-pembayaran', name: 'skema-pembayaran', component: () => import('../pages/manajemen/SkemaPembayaranPage.vue'),
         meta: {
           breadcrumb: [
             { name: "Dashboard", link: "/dashboard" },
@@ -91,9 +97,7 @@ const routes = [
 
       // Kelompok
       {
-        path: 'kelompok',
-        name: 'kelompok',
-        component: () => import('../pages/manajemen/KelompokPage.vue'),
+        path: 'kelompok', name: 'kelompok', component: () => import('../pages/manajemen/KelompokPage.vue'),
         meta: {
           breadcrumb: [
             { name: "Dashboard", link: "/dashboard" },
@@ -104,9 +108,7 @@ const routes = [
 
       // Detail Kelompok
       {
-        path: 'kelompok/detail/:id',
-        name: 'detail-kelompok',
-        component: () => import('../pages/manajemen/KelompokDetailPage.vue'),
+        path: 'kelompok/detail/:id', name: 'detail-kelompok', component: () => import('../pages/manajemen/KelompokDetailPage.vue'),
         meta: {
           breadcrumb: [
             { name: "Dashboard", link: "/dashboard" },
@@ -118,9 +120,7 @@ const routes = [
 
       // Profil
       {
-        path: 'profile',
-        name: 'profile',
-        component: () => import('../pages/ProfilePage.vue'),
+        path: 'profile', name: 'profile', component: () => import('../pages/ProfilePage.vue'),
         meta: {
           breadcrumb: [
             { name: "Dashboard", link: "/dashboard" },
