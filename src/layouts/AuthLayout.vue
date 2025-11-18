@@ -9,7 +9,7 @@
     </div>
 
     <!-- Slot konten halaman -->
-    <div class="z-10 w-full flex justify-center">
+    <div class="z-10 w-full flex justify-center p-3">
       <slot />
     </div>
 
