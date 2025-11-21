@@ -557,7 +557,7 @@ const fetchDataFromSource = async () => {
 
   if (importSource.value === 'sia_user') {
     // Menggunakan instance sia yang sudah diimpor, endpoint adalah '/user'
-    const url = '/user'; 
+    const url = '/users'; 
 
     try {
         // Panggilan menggunakan instance sia.get()
