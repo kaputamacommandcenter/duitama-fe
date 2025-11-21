@@ -19,7 +19,7 @@ const routes = [
 {
   path: '/dashboard', name: 'dashboard', component: () => import('../layouts/DashboardLayout.vue'),
   meta: {
-    requiresAuth: false,
+    requiresAuth: true,
     breadcrumb: [
       { name: "Dashboard", link: "/dashboard" }
     ]
