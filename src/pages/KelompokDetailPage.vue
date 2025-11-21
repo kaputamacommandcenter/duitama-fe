@@ -119,9 +119,9 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import Swal from "sweetalert2";
-import { sia } from "../../api/sia";
+import { sia } from "../api/sia";
 // Menggunakan import yang disediakan user
-import { showLoading, hideLoading } from "../../stores/loading" 
+import { showLoading, hideLoading } from "../stores/loading" 
 
 /* ===== STATE ===== */
 const currentUsers = ref([]);

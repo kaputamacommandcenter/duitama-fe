@@ -106,24 +106,26 @@ interface MenuItem {
 
 // Data menu utama
 const menuItems: MenuItem[] = [
-  {id: "beranda",name: "Beranda",icon: "fa-solid fa-house",link: "/dashboard"},
+  {id: "beranda",name: "Beranda",icon: "fa-solid fa-house",link: "/dashboard"},  
+  {id: "generate-tagihan",name: "Generate Tagihan",icon: "fa-solid fa-receipt",link: "/dashboard/generate-tagihan"},
   {
-    id: "pembayaran", name: "Manajemen Pembayaran", icon: "fa-solid fa-credit-card",
+    id: "kelola-pembayaran",
+    name: "Kelola Pembayaran",
+    icon: "fa-solid fa-file-lines",
     children: [
-      {id: "kategori",name: "Kategori",icon: "fa-solid fa-layer-group",link: "/dashboard/kategori"},
-      {id: "item",name: "Item Pembayaran",icon: "fa-solid fa-list",link: "/dashboard/item"},
-      {id: "potongan",name: "Potongan",icon: "fa-solid fa-tag",link: "/dashboard/potongan"},
-      {id: "kelompok",name: "Kelompok",icon: "fa-solid fa-users",link: "/dashboard/kelompok"},
-      {id: "skema-pembayaran",name: "Skema Pembayaran",icon: "fa-solid fa-scale-balanced",link: "/dashboard/skema-pembayaran"},
-    ],
+      { id: "template-pembayaran", name: "Template Pembayaran", icon: "fa-solid fa-file", link: "/dashboard/template-pembayaran" },
+      { id: "Potongan", name: "Potongan", icon: "fa-solid fa-tag", link: "/dashboard/potongan" },
+    ]
   },
   {
-    id: "master-data", name: "Master Data", icon: "fa-solid fa-database",
+    id: "kelola-pembayar",
+    name: "Kelola Pembayar",
+    icon: "fa-solid fa-gear",
     children: [
-      {id: "data-mahasiswa",name: "Data Mahasiswa",icon: "fa-solid fa-user-graduate",link: "/dashboard/data-mahasiswa"},
-      {id: "program-studi",name: "Program Studi",icon: "fa-solid fa-graduation-cap",link: "/dashboard/program-studi"},
-    ],
-  },
+      {id: "data-pembayar",name: "Data Pembayar",icon: "fa-solid fa-user",link: "/dashboard/data-pembayar"},
+      {id: "kelompok-pembayar",name: "Kelompok Pembayar",icon: "fa-solid fa-users",link: "/dashboard/kelompok-pembayar"},
+    ]
+  }
 ]
 
 // PERBAIKAN 1: Hapus `const props` dan `eslint-disable`

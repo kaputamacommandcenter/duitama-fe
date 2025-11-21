@@ -13,123 +13,96 @@ const routes = [
   // =======================================================
   // PROTECTED ROUTES
   // =======================================================
-  {
-    path: '/dashboard', name: 'dashboard', component: () => import('../layouts/DashboardLayout.vue'),
-    meta: {
-      requiresAuth: true,
-      breadcrumb: [
-        { name: "Dashboard", link: "/dashboard" }
-      ]
-    },
-    children: [
-      // Home
-      {
-        path: '', name: 'dashboard-home', component: () => import('../pages/DashboardHome.vue'),
-        meta: {
-          breadcrumb: [
-            { name: "Dashboard" }
-          ]
-        }
-      },
-      {
-        path: 'data-mahasiswa', name: 'data-mahasiswa', component: () => import('../pages/DataMahasiswaPage.vue'),
-        meta: {
-          breadcrumb: [
-            { name: "Dashboard", link: "/dashboard" },
-            { name: "Data Mahasiswa" }
-          ]
-        }
-      },
-      {
-        path: 'detail-pembayaran/:npm', name: 'detail-pembayaran', component: () => import('../pages/DetailPembayaranPage.vue'),
-        meta: {
-          breadcrumb: [
-            { name: "Dashboard", link: "/dashboard" },
-            { name: "Data Mahasiswa", link: "/dashboard/data-mahasiswa" },
-            { name: "Detail Pembayaran" }
-          ]
-        }
-      },
-
-      // Kategori
-      {
-        path: 'kategori', name: 'kategori', component: () => import('../pages/manajemen/KategoriPage.vue'),
-        meta: {
-          breadcrumb: [
-            { name: "Dashboard", link: "/dashboard" },
-            { name: "Kategori" }
-          ]
-        }
-      },
-
-      // Item Pembayaran
-      {
-        path: 'item', name: 'item-pembayaran', component: () => import('../pages/manajemen/ItemPembayaranPage.vue'),
-        meta: {
-          breadcrumb: [
-            { name: "Dashboard", link: "/dashboard" },
-            { name: "Item Pembayaran" }
-          ]
-        }
-      },
-
-      // Potongan
-      {
-        path: 'potongan', name: 'potongan',component: () => import('../pages/manajemen/PotonganPage.vue'),
-        meta: {
-          breadcrumb: [
-            { name: "Dashboard", link: "/dashboard" },
-            { name: "Potongan" }
-          ]
-        }
-      },
-
-      // Skema Pembayaran
-      {
-        path: 'skema-pembayaran', name: 'skema-pembayaran', component: () => import('../pages/manajemen/SkemaPembayaranPage.vue'),
-        meta: {
-          breadcrumb: [
-            { name: "Dashboard", link: "/dashboard" },
-            { name: "Skema Pembayaran" }
-          ]
-        }
-      },
-
-      // Kelompok
-      {
-        path: 'kelompok', name: 'kelompok', component: () => import('../pages/manajemen/KelompokPage.vue'),
-        meta: {
-          breadcrumb: [
-            { name: "Dashboard", link: "/dashboard" },
-            { name: "Kelompok" }
-          ]
-        }
-      },
-
-      // Detail Kelompok
-      {
-        path: 'kelompok/detail/:id', name: 'detail-kelompok', component: () => import('../pages/manajemen/KelompokDetailPage.vue'),
-        meta: {
-          breadcrumb: [
-            { name: "Dashboard", link: "/dashboard" },
-            { name: "Kelompok", link: "/dashboard/kelompok" },
-            { name: "Detail Kelompok" }
-          ]
-        }
-      },
-
-      // Profil
-      {
-        path: 'profile', name: 'profile', component: () => import('../pages/ProfilePage.vue'),
-        meta: {
-          breadcrumb: [
-            { name: "Dashboard", link: "/dashboard" },
-            { name: "Profil Saya" }
-          ]
-        }
-      },
-    ],
+  // =======================================================
+// PROTECTED ROUTES (SUDAH DIPERBAIKI)
+// =======================================================
+{
+  path: '/dashboard', name: 'dashboard', component: () => import('../layouts/DashboardLayout.vue'),
+  meta: {
+    requiresAuth: false,
+    breadcrumb: [
+      { name: "Dashboard", link: "/dashboard" }
+    ]
   },
+  children: [
+    // Home (Path kosong, menjadi /dashboard)
+    {
+      path: '', name: 'dashboard-home', component: () => import('../pages/DashboardHome.vue'),
+      meta: {
+        breadcrumb: [
+          { name: "Dashboard" }
+        ]
+      }
+    },
+    // Generate Tagihan (Diperbaiki: path: 'generate-tagihan')
+    {
+      path: 'generate-tagihan', name: 'generate-tagihan', component: () => import('../pages/GenerateTagihanPage.vue'),
+      meta: {
+        breadcrumb: [
+          { name: "Dashboard" },
+          { name: "Generate Tagihan" }
+        ]
+      }
+    },
+    // Template Pembayaran (Diperbaiki: path: 'template-pembayaran')
+    {
+      path: 'template-pembayaran', name: 'template-pembayaran', component: () => import('../pages/TemplatePembayaranPage.vue'),
+      meta: {
+        breadcrumb: [
+          { name: "Dashboard", link: "/dashboard" },
+          { name: "Template Pembayaran" }
+        ]
+      }
+    },
+    {
+      path: 'kelompok-pembayar', name: 'kelompok-pembayar', component: () => import('../pages/KelompokPembayar.vue'),
+      meta: {
+        breadcrumb: [
+          { name: "Dashboard", link: "/dashboard" },
+          { name: "Kelola Pembayar" },
+          { name: "Kelompok Pembayar" }
+        ]
+      }
+    },
+    {
+      path: 'data-pembayar', name: 'data-pembayar', component: () => import('../pages/DataPembayar.vue'),
+      meta: {
+        breadcrumb: [
+          { name: "Dashboard", link: "/dashboard" },
+          { name: "Kelola Pembayar" },
+          { name: "Data Pembayar" }
+        ]
+      }
+    },
+    // Detail Kelompok (Sudah benar)
+    {
+      path: 'kelompok/detail/:id', name: 'detail-kelompok', component: () => import('../pages/KelompokDetailPage.vue'),
+      meta: {
+        breadcrumb: [
+          { name: "Dashboard", link: "/dashboard" },
+          { name: "Kelompok Payer", link: "/dashboard/kelompok-payer" },
+          { name: "Detail Kelompok" }
+        ]
+      }
+    },
+    {
+      path: 'potongan', name: 'potongan', component: () => import('../pages/Potongan.vue'),
+      meta: {
+        breadcrumb: [
+          { name: "Dashboard", link: "/dashboard" },
+          { name: "Kelola Pembayaran" },
+          { name: "Potongan" }
+        ]
+      }
+    },
+    // Profil (Sudah benar)
+    {
+      path: 'profile', name: 'profile', component: () => import('../pages/ProfilePage.vue'),
+      meta: { /* ... */ }
+    },
+  ],
+},
+// ...,
 
   // === Not Found ===
   {

@@ -76,7 +76,6 @@
       </header>
 
 <main class="flex-1 overflow-y-auto px-6 py-4">
-  <!-- Breadcrumbs tetap di div terpisah -->
   <div
     :key="route.fullPath"
     class="text-sm breadcrumbs mb-5 p-3 rounded-xl bg-white/60 backdrop-blur-md border border-sky-200 shadow-sm"
@@ -102,14 +101,9 @@
     </ul>
   </div>
 
-  <!-- Router-view dengan transition -->
-  <router-view v-slot="{ Component }">
-    <transition name="fade" mode="out-in">
-      <component :is="Component" :key="route.fullPath" />
-    </transition>
+  <router-view :key="route.fullPath">
   </router-view>
 </main>
-
 
 
       <footer class="bg-white/60 backdrop-blur-md shadow-md p-4">
@@ -129,8 +123,7 @@ import { api } from "../api/config"
 import { useRouter, useRoute } from "vue-router"
 import LoadingOverlay from "../components/LoadingOverlay.vue"
 import { showLoading, hideLoading } from "../stores/loading"
-// Import komponen Sidebar
-import Sidebar from "../components/Sidebar.vue" // Sesuaikan path ini jika perlu
+import Sidebar from "../components/Sidebar.vue"
 
 const router = useRouter()
 const route = useRoute()
@@ -148,12 +141,10 @@ interface BreadcrumbItem {
 
 
 const breadcrumbs = computed<BreadcrumbItem[]>(() => {
-  // Jika route punya meta breadcrumb
   if (route.meta.breadcrumb) {
     return route.meta.breadcrumb as BreadcrumbItem[]
   }
 
-  // Auto generate breadcrumb
   const segments = route.path.split("/").filter(Boolean)
   const paths: BreadcrumbItem[] = []
 
@@ -171,8 +162,6 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => {
 })
 
 
-
-// logout
 const handleLogout = async () => {
   try {
     showLoading("Sedang keluar...")
@@ -210,7 +199,6 @@ onBeforeUnmount(() => window.removeEventListener("resize", updateWindowWidth))
 <style scoped>
 @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css");
 
-/* Hanya transisi fade yang relevan untuk overlay dan content */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.5s ease;
