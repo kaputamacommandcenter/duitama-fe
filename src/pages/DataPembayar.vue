@@ -29,28 +29,39 @@
           <thead>
             <tr>
               <th>ID/NPM</th>
-              <th>Nama</th>
+              <th>Nama Lengkap</th>
               <th>Jenis</th>
-              <th>Program Studi</th>
+              <th>Jurusan</th>
               <th>Email</th>
               <th>Kelompok</th>
               <th>Aksi</th>
             </tr>
           </thead>
           <tbody>
+            <tr v-if="isFetchingMainData">
+                <td colspan="7" class="text-center py-8">
+                    <span class="loading loading-spinner loading-lg text-primary"></span>
+                    <p class="mt-2 text-gray-500">Memuat Data Pembayar...</p>
+                </td>
+            </tr>
+            <tr v-else-if="payers.length === 0">
+                <td colspan="7" class="text-center py-4 text-gray-500">
+                    Tidak ada data Pembayar.
+                </td>
+            </tr>
             <tr v-for="p in payers" :key="p.id">
               <td>
                 <span class="font-bold">{{ p.identity_number }}</span>
                 <br>
                 <span class="text-xs opacity-50">{{ p.npm || '-' }}</span>
               </td>
-              <td>{{ p.name }}</td>
+              <td>{{ p.nama_lengkap }}</td> <!-- Diubah: nama_lengkap -->
               <td>
                 <div class="badge" :class="p.payer_type === 'MAHASISWA' ? 'badge-info' : 'badge-ghost'">
                     {{ p.payer_type }}
                 </div>
               </td>
-              <td>{{ p.study_program_code }}</td>
+              <td>{{ p.jurusan }}</td> <!-- Diubah: jurusan -->
               <td>{{ p.email }}</td>
               <td>
                 <span v-if="getGroupName(p.payer_group_id)" class="badge badge-success badge-outline">
@@ -63,11 +74,6 @@
                 <button class="btn btn-xs btn-error btn-outline" @click="confirmDelete(p.id)">Hapus</button>
               </td>
             </tr>
-            <tr v-if="payers.length === 0">
-                <td colspan="7" class="text-center py-4 text-gray-500">
-                    Tidak ada data Pembayar.
-                </td>
-            </tr>
           </tbody>
         </table>
       </div>
@@ -78,16 +84,16 @@
     <div class="modal" :class="{'modal-open': modalVisible}">
       <div class="modal-box w-11/12 max-w-lg">
         <h3 class="font-bold text-lg mb-4">
-          {{ formMode === 'add' ? 'Tambah Pembayar Baru (UMUM)' : 'Edit Pembayar: ' + currentPayer.name }}
+          {{ formMode === 'add' ? 'Tambah Pembayar Baru (UMUM)' : 'Edit Pembayar: ' + currentPayer.nama_lengkap }} <!-- Diubah: nama_lengkap -->
         </h3>
 
         <form @submit.prevent="savePayer" class="space-y-3">
           
           <div class="grid grid-cols-2 gap-3">
-            <!-- Nama -->
+            <!-- Nama Lengkap -->
             <label class="form-control w-full">
               <div class="label"><span class="label-text">Nama Lengkap</span></div>
-              <input type="text" v-model="currentPayer.name" class="input input-bordered w-full" required />
+              <input type="text" v-model="currentPayer.nama_lengkap" class="input input-bordered w-full" required /> <!-- Diubah: nama_lengkap -->
             </label>
             <!-- ID Number -->
             <label class="form-control w-full">
@@ -100,7 +106,7 @@
           <div v-if="formMode === 'add'" class="alert alert-info shadow-lg p-3 text-sm">
               <!-- Menggunakan Font Awesome: fa-circle-info -->
               <i class="fa-solid fa-circle-info flex-shrink-0 w-6 h-6"></i>
-              <span>Tipe Pembayar Otomatis: **UMUM**. Bidang NPM dan Program Studi diabaikan.</span>
+              <span>Tipe Pembayar Otomatis: **UMUM**. Bidang NPM dan Jurusan diabaikan.</span> <!-- Diubah: Jurusan -->
           </div>
 
           <!-- Email -->
@@ -135,8 +141,8 @@
                   <input type="text" v-model="currentPayer.npm" class="input input-bordered w-full" />
                 </label>
                 <label class="form-control w-full">
-                    <div class="label"><span class="label-text">Kode Program Studi</span></div>
-                    <select v-model="currentPayer.study_program_code" class="select select-bordered w-full">
+                    <div class="label"><span class="label-text">Jurusan</span></div> <!-- Diubah: Jurusan -->
+                    <select v-model="currentPayer.jurusan" class="select select-bordered w-full"> <!-- Diubah: jurusan -->
                         <option disabled value="">Pilih Program Studi</option>
                         <option v-for="sp in dummyStudyPrograms" :key="sp" :value="sp">{{ sp }}</option>
                     </select>
@@ -174,8 +180,8 @@
                 <label class="form-control w-full">
                     <div class="label"><span class="label-text">Pilih Sumber Data API</span></div>
                     <select v-model="importSource" class="select select-bordered w-full">
-                        <option value="sia">RESTAPI-SIA (Mahasiswa Aktif)</option>
-                        <option value="pmb">RESTAPI-PMB (Calon Mahasiswa)</option>
+                        <option value="sia_user">RESTAPI-SIA (Endpoint /user)</option>
+                        <option value="pmb">RESTAPI-PMB (Calon Mahasiswa - Simulasi)</option>
                     </select>
                 </label>
 
@@ -183,7 +189,7 @@
                     <button type="button" class="btn btn-outline" @click="importModalVisible = false">Batal</button>
                     <button class="btn btn-warning" @click="fetchDataFromSource" :disabled="isImporting">
                         <span v-if="isImporting" class="loading loading-spinner"></span>
-                        {{ isImporting ? 'Mengambil Data...' : 'Ambil Data (Simulasi)' }}
+                        {{ isImporting ? 'Mengambil Data...' : 'Ambil Data dari API' }}
                     </button>
                 </div>
             </div>
@@ -198,10 +204,10 @@
                     </div>
                 </div>
 
-                <!-- Input Pencarian Baru -->
+                <!-- Input Pencarian Diperbarui -->
                 <div class="mb-4">
-                    <input type="text" v-model="searchTerm" placeholder="Cari berdasarkan Nama atau ID Number..." 
-                           class="input input-bordered w-full" />
+                    <input type="text" v-model="searchTerm" placeholder="Cari berdasarkan Nama atau NPM..." 
+                            class="input input-bordered w-full" />
                 </div>
 
                 <div class="overflow-x-auto max-h-80 mb-4 border rounded-lg">
@@ -211,10 +217,10 @@
                                 <th>
                                     <input type="checkbox" class="checkbox checkbox-sm" v-model="selectAllImport">
                                 </th>
-                                <th>Nama</th>
                                 <th>ID Number</th>
                                 <th>NPM</th>
-                                <th>Prodi</th>
+                                <th>Nama Lengkap</th>
+                                <th>Jurusan</th>
                                 <th>Tipe</th>
                                 <th>Status</th>
                             </tr>
@@ -225,10 +231,10 @@
                                     <!-- Checkbox menggunakan ID Number yang ada di data yang sudah difilter -->
                                     <input type="checkbox" class="checkbox checkbox-sm" :value="data.identity_number" v-model="selectedImportIds">
                                 </td>
-                                <td>{{ data.name }}</td>
                                 <td>{{ data.identity_number }}</td>
                                 <td>{{ data.npm || '-' }}</td>
-                                <td>{{ data.study_program_code }}</td>
+                                <td>{{ data.nama_lengkap }}</td>
+                                <td>{{ data.jurusan }}</td>
                                 <td><div class="badge badge-outline badge-sm">{{ data.payer_type }}</div></td>
                                 <td>
                                     <div v-if="isDuplicate(data.identity_number)" class="badge badge-error badge-sm">Duplikat</div>
@@ -260,286 +266,391 @@
 
 <script setup>
 import Swal from "sweetalert2";
-import { ref, computed, watch } from "vue";
-import { useRouter } from 'vue-router'; 
-
-const router = useRouter(); 
+import { ref, computed, watch, onMounted } from "vue"; 
+import { sia } from "../api/sia"; // API untuk import mahasiswa
+import { api } from "../api/config"; // API untuk data utama /payers
 
 // =================== STATE DUMMY DATA =====================
 const dummyStudyPrograms = ref(['TK', 'MI', 'SI', 'AK', 'MN', 'TI']);
 
 const payerGroups = ref([
- { id: 101, name: "Angkatan 2024 - Kelas Pagi A" },
- { id: 102, name: "Angkatan 2024 - Kelas Pagi B" },
+  { id: 101, name: "Angkatan 2024 - Kelas Pagi A" },
+  { id: 102, name: "Angkatan 2024 - Kelas Pagi B" },
 ]);
 
-const payers = ref([
- { id: 1, identity_number: "20240001", npm: "20240001", name: "Budi Santoso", study_program_code: "SI", email: "budi.s@mail.com", payer_type: "MAHASISWA", phone_number: "081234567890", payer_group_id: 101 },
- { id: 2, identity_number: "20240002", npm: "20240002", name: "Siti Aisyah", study_program_code: "TK", email: "siti.a@mail.com", payer_type: "MAHASISWA", phone_number: "081234567891", payer_group_id: null },
- { id: 3, identity_number: "20250001", npm: null, name: "Rahmat Hidayat", study_program_code: "MI", email: "rahmat.h@mail.com", payer_type: "CALON_MAHASISWA", phone_number: "081234567892", payer_group_id: 102 }
-]);
+// Data Pembayar akan diisi dari API /payers
+const payers = ref([]);
+const isFetchingMainData = ref(true); // State untuk loading tabel utama
+
+// =================== LOGIKA FETCH DATA UTAMA (/payers) =====================
+
+const fetchPayers = async () => {
+    isFetchingMainData.value = true;
+    try {
+        // Menggunakan instance 'api' untuk mengambil data utama
+        const response = await api.get('/payers'); 
+        
+        const rawData = response.data.data || response.data;
+
+        if (Array.isArray(rawData)) {
+            // Asumsikan struktur data dari /payers sudah sesuai dengan format Payer lokal
+            payers.value = rawData;
+        } else {
+            Swal.fire('Error Data', 'Struktur respons API /payers tidak valid.', 'error');
+            payers.value = [];
+        }
+    } catch (error) {
+        console.error("Error fetching payers data:", error);
+        const errorMessage = error.response ? `Gagal mengambil data pembayar: ${error.response.status} - ${error.response.statusText}` : 'Koneksi ke API Pembayar gagal.';
+        Swal.fire('Gagal Ambil Data', errorMessage, 'error');
+        // Fallback ke array kosong
+        payers.value = [];
+    } finally {
+        isFetchingMainData.value = false;
+    }
+};
+
+// Panggil fetchPayers saat komponen dimuat
+onMounted(fetchPayers);
+
 
 // =================== STATE MANAGEMENT FORM =====================
 const modalVisible = ref(false);
 const formMode = ref('add'); // 'add' atau 'edit'
 
 const initialPayer = { 
- id: null, 
- identity_number: '', 
- npm: '', 
- name: '', 
- study_program_code: '', 
- email: '', 
- payer_type: 'MAHASISWA', 
- phone_number: '', 
- payer_group_id: null 
+  id: null, 
+  identity_number: '', 
+  npm: '', 
+  nama_lengkap: '', 
+  jurusan: '',     
+  email: '', 
+  payer_type: 'MAHASISWA', 
+  phone_number: '', 
+  payer_group_id: null 
 };
 const currentPayer = ref({...initialPayer});
 
 // =================== STATE MANAGEMENT IMPORT =====================
 const importModalVisible = ref(false);
-const importSource = ref('sia'); // 'sia' atau 'pmb'
+const importSource = ref('sia_user'); 
 const isImporting = ref(false);
-const importedData = ref([]); // Data yang diambil dari sumber (perlu difilter)
-const selectedImportIds = ref([]); // ID Number data yang dipilih untuk di-import
-const searchTerm = ref(''); // State baru untuk pencarian
+const importedData = ref([]); 
+const selectedImportIds = ref([]); 
+const searchTerm = ref(''); 
 
-// Computed untuk data yang difilter
+// Computed untuk data yang difilter (Pencarian Nama atau NPM saja)
 const filteredImportedData = computed(() => {
- if (!searchTerm.value) {
-  return importedData.value;
- }
- const term = searchTerm.value.toLowerCase();
- return importedData.value.filter(data => 
-  data.name.toLowerCase().includes(term) || 
-  data.identity_number.includes(term) ||
-  (data.npm && data.npm.includes(term))
- );
+  if (!searchTerm.value) {
+    return importedData.value;
+  }
+  const term = searchTerm.value.toLowerCase();
+  
+  return importedData.value.filter(data => 
+    // Pencarian berdasarkan Nama Lengkap (nama_lengkap)
+    data.nama_lengkap.toLowerCase().includes(term) || 
+    // Pencarian berdasarkan NPM
+    (data.npm && data.npm.includes(term))
+  );
 });
 
 // Computed untuk select all
 const selectAllImport = computed({
- get: () => selectedImportIds.value.length === importedData.value.length && importedData.value.length > 0,
- set: (value) => {
-  if (value) {
-   // Pilih semua ID dari data ASLI (importedData)
-   selectedImportIds.value = importedData.value.map(d => d.identity_number);
-  } else {
-   selectedImportIds.value = [];
+  get: () => selectedImportIds.value.length === filteredImportedData.value.length && filteredImportedData.value.length > 0,
+  set: (value) => {
+    if (value) {
+      // Pilih semua ID dari data yang difilter (untuk select all sesuai tampilan)
+      selectedImportIds.value = filteredImportedData.value.map(d => d.identity_number);
+    } else {
+      // Hapus semua ID yang ada di data yang difilter dari array selectedImportIds
+      const filteredIds = filteredImportedData.value.map(d => d.identity_number);
+      selectedImportIds.value = selectedImportIds.value.filter(id => !filteredIds.includes(id));
+    }
   }
- }
 });
+
 
 // WATCHER: Reset pencarian saat modal ditutup
 watch(importModalVisible, (newVal) => {
- if (!newVal) {
-  searchTerm.value = '';
- }
+  if (!newVal) {
+    searchTerm.value = '';
+  }
 });
 
 // =================== LOGIKA UMUM =====================
 
 const getGroupName = (groupId) => {
- const group = payerGroups.value.find(g => g.id === groupId);
- return group ? group.name : null;
+  const group = payerGroups.value.find(g => g.id === groupId);
+  return group ? group.name : null;
 };
 
 // Cek Duplikasi
 const isDuplicate = (identityNumber) => {
- return payers.value.some(p => p.identity_number === identityNumber);
+  return payers.value.some(p => p.identity_number === identityNumber);
 };
 
-// =================== LOGIKA CRUD MANUAL =====================
+// =================== LOGIKA CRUD MANUAL (API-DRIVEN) =====================
 
 const openForm = (mode, payer = null) => {
- formMode.value = mode;
+  formMode.value = mode;
 
- if (mode === 'add') {
- currentPayer.value = { 
-  ...initialPayer,
-  payer_type: 'UMUM', // Set otomatis ke UMUM untuk mode tambah baru
-  npm: '',
-  study_program_code: ''
- };
- } else {
- // Mode Edit: Clone objek
- currentPayer.value = JSON.parse(JSON.stringify(payer));
- }
+  if (mode === 'add') {
+    currentPayer.value = { 
+      ...initialPayer,
+      payer_type: 'UMUM', // Set otomatis ke UMUM untuk mode tambah baru
+      npm: '',
+      jurusan: '' 
+    };
+  } else {
+    // Mode Edit: Clone objek
+    currentPayer.value = JSON.parse(JSON.stringify(payer));
+  }
 
- modalVisible.value = true;
+  modalVisible.value = true;
 };
 
 const closeModal = () => {
- modalVisible.value = false;
+  modalVisible.value = false;
 };
 
-const savePayer = () => {
- // 1. Validasi Kolom Wajib (Nama, ID Number, Email)
- if (!currentPayer.value.name || !currentPayer.value.identity_number || !currentPayer.value.email) {
- Swal.fire('Validasi Gagal', 'Harap isi Nama Lengkap, Nomor Identitas, dan Email.', 'warning');
- return;
- }
- 
- // 2. Validasi Program Studi (Hanya berlaku untuk EDIT jika tipe BUKAN UMUM)
- if (formMode.value === 'edit' && currentPayer.value.payer_type !== 'UMUM' && !currentPayer.value.study_program_code) {
-  Swal.fire('Validasi Gagal', 'Program Studi wajib diisi untuk tipe Pembayar MAHASISWA atau CALON MAHASISWA.', 'warning');
-  return;
- }
+const savePayer = async () => {
+  // 1. Validasi Kolom Wajib
+  if (!currentPayer.value.nama_lengkap || !currentPayer.value.identity_number || !currentPayer.value.email) {
+    Swal.fire('Validasi Gagal', 'Harap isi Nama Lengkap, Nomor Identitas, dan Email.', 'warning');
+    return;
+  }
+  
+  // 2. Validasi Jurusan
+  if (formMode.value === 'edit' && currentPayer.value.payer_type !== 'UMUM' && !currentPayer.value.jurusan) {
+    Swal.fire('Validasi Gagal', 'Jurusan wajib diisi untuk tipe Pembayar MAHASISWA atau CALON MAHASISWA.', 'warning');
+    return;
+  }
 
- // 3. Cek duplikasi Identity Number (kecuali untuk item yang sedang diedit)
- const isDuplicateId = payers.value.some(p => 
-  p.identity_number === currentPayer.value.identity_number && p.id !== currentPayer.value.id
- );
+  // 3. Cek duplikasi Identity Number (kecuali untuk item yang sedang diedit)
+  const isDuplicateId = payers.value.some(p => 
+    p.identity_number === currentPayer.value.identity_number && p.id !== currentPayer.value.id
+  );
 
- if (isDuplicateId) {
- Swal.fire('Validasi Gagal', 'Nomor Identitas harus unik.', 'error');
- return;
- }
+  if (isDuplicateId) {
+    Swal.fire('Validasi Gagal', 'Nomor Identitas harus unik.', 'error');
+    return;
+  }
 
- if (formMode.value === 'add') {
- // Pastikan bidang yang dihapus tetap kosong/default untuk konsistensi data
- currentPayer.value.npm = null;
- currentPayer.value.study_program_code = null;
- currentPayer.value.payer_type = 'UMUM';
+  const payload = { ...currentPayer.value };
+  
+  // Cleanup fields for 'add' (UMUM) if they exist
+  if (formMode.value === 'add') {
+      // Pastikan bidang yang tidak relevan untuk UMUM di mode 'add' dikirim sebagai null/tidak ada
+      payload.npm = null;
+      payload.jurusan = null;
+      payload.payer_type = 'UMUM';
+      // Hapus ID lama (yang masih null) dari payload POST
+      delete payload.id;
+  }
 
- // Tentukan ID baru
- const newId = payers.value.length ? Math.max(...payers.value.map(p => p.id)) + 1 : 1;
- currentPayer.value.id = newId;
+  try {
+      let successMessage = '';
 
- payers.value.push({ ...currentPayer.value });
- Swal.fire('Berhasil!', `Pembayar ${currentPayer.value.name} berhasil ditambahkan sebagai UMUM.`, 'success');
- } else {
- // Mode Edit
- const index = payers.value.findIndex(p => p.id === currentPayer.value.id);
- if (index !== -1) {
-  payers.value[index] = { ...currentPayer.value };
-  Swal.fire('Berhasil!', `Pembayar ${currentPayer.value.name} berhasil diperbarui.`, 'success');
- }
- }
+      if (formMode.value === 'add') {
+          // Operasi Tambah (POST)
+          await api.post('/payers', payload);
+          successMessage = `Pembayar ${payload.nama_lengkap} berhasil ditambahkan.`; 
+      } else {
+          // Operasi Edit (PUT)
+          // ID digunakan di URL untuk mengidentifikasi resource
+          await api.put(`/payers/${payload.id}`, payload);
+          successMessage = `Pembayar ${payload.nama_lengkap} berhasil diperbarui.`;
+      }
+      
+      closeModal();
+      await fetchPayers(); // Refresh data utama dari API
+      Swal.fire('Berhasil!', successMessage, 'success');
 
- closeModal();
+  } catch (error) {
+      console.error("Error saving payer data:", error);
+      const errorDetail = error.response?.data?.message || error.message || 'Terjadi kesalahan jaringan atau validasi.';
+      Swal.fire('Gagal Simpan', `Gagal menyimpan data: ${errorDetail}`, 'error');
+  }
+};
+
+const deletePayer = async (id) => {
+    try {
+        // Operasi Hapus (DELETE)
+        await api.delete(`/payers/${id}`);
+    } catch (error) {
+        console.error("Error deleting payer data:", error);
+        const errorDetail = error.response?.data?.message || error.message || 'Terjadi kesalahan jaringan atau validasi.';
+        // Lempar error agar bisa ditangkap oleh confirmDelete
+        throw new Error(errorDetail); 
+    }
 };
 
 const confirmDelete = (id) => {
- Swal.fire({
- title: 'Apakah Anda Yakin?',
- text: "Menghapus data pembayar ini?",
- icon: 'warning',
- showCancelButton: true,
- confirmButtonColor: '#d33',
- cancelButtonColor: '#3085d6',
- confirmButtonText: 'Ya, Hapus!'
- }).then((result) => {
- if (result.isConfirmed) {
-  deletePayer(id);
-  Swal.fire(
-  'Terhapus!',
-  'Pembayar berhasil dihapus.',
-  'success'
-  );
- }
- });
+  Swal.fire({
+    title: 'Apakah Anda Yakin?',
+    text: "Menghapus data pembayar ini?",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Ya, Hapus!'
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+          await deletePayer(id); // Panggil fungsi delete API
+          await fetchPayers(); // Refresh data utama dari API
+          Swal.fire(
+            'Terhapus!',
+            'Pembayar berhasil dihapus.',
+            'success'
+          );
+      } catch (error) {
+           Swal.fire('Gagal Hapus', error.message || 'Terjadi kesalahan saat menghapus data.', 'error');
+      }
+    }
+  });
 };
 
-const deletePayer = (id) => {
- const index = payers.value.findIndex(p => p.id === id);
- if (index !== -1) {
- payers.value.splice(index, 1);
- }
-};
 
-
-// =================== LOGIKA IMPORT API (SIMULASI 2 TAHAP) =====================
+// =================== LOGIKA IMPORT API (SIA) =====================
 
 const openImportModal = () => {
- // Reset data tahap 2 saat modal dibuka
- importedData.value = []; 
- selectedImportIds.value = [];
- importModalVisible.value = true;
+  // Reset data tahap 2 saat modal dibuka
+  importedData.value = []; 
+  selectedImportIds.value = [];
+  importModalVisible.value = true;
 };
 
 const resetImportData = () => {
- // Kembali ke tahap 1
- importedData.value = [];
- selectedImportIds.value = [];
- isImporting.value = false;
- searchTerm.value = ''; // Reset pencarian
+  // Kembali ke tahap 1
+  importedData.value = [];
+  selectedImportIds.value = [];
+  isImporting.value = false;
+  searchTerm.value = ''; // Reset pencarian
 };
 
-// TAHAP 1: Mengambil data dari sumber (Simulasi Fetch)
-const fetchDataFromSource = () => {
- isImporting.value = true;
- 
- // SIMULASI Fetch Data dari API (Ganti dengan panggilan API sesungguhnya)
- setTimeout(() => {
-  let newPayers = [];
+/**
+ * Fungsi untuk memproses data user dari API SIA menjadi format Payer yang sesuai.
+ * @param {Array} apiUsers - Array objek user dari response API SIA.
+ * @returns {Array} Array objek Payer yang terstruktur.
+ */
+const transformSIAUserToPayer = (apiUsers) => {
+    return apiUsers.map(user => ({
+        // LOGIKA: Gunakan no_ktp, jika kosong gunakan npm. Jika keduanya kosong, gunakan user_id.
+        identity_number: user.no_ktp || user.npm || user.user_id.toString(), 
+        npm: user.npm || null,
+        nama_lengkap: user.nama_lengkap || user.name || user.full_name || 'Nama Tidak Tersedia', 
+        jurusan: user.jurusan || user.prodi_kode || null,     
+        email: user.email || 'email@default.com',
+        // Asumsi data dari /user adalah Mahasiswa atau sejenisnya
+        payer_type: user.is_active === 1 ? 'MAHASISWA' : 'CALON_MAHASISWA', 
+        phone_number: user.no_telp || user.phone || null,
+        payer_group_id: null // Kelompok diisi manual atau dari data lain
+    }));
+};
+
+// TAHAP 1: Mengambil data dari sumber (Panggilan API Sesungguhnya)
+const fetchDataFromSource = async () => {
+  isImporting.value = true;
+  importedData.value = [];
+  selectedImportIds.value = [];
+
+  if (importSource.value === 'sia_user') {
+    // Menggunakan instance sia yang sudah diimpor, endpoint adalah '/user'
+    const url = '/user'; 
+
+    try {
+        // Panggilan menggunakan instance sia.get()
+        const response = await sia.get(url); 
+        const rawData = response.data.data || response.data; 
+
+        if (Array.isArray(rawData) && rawData.length > 0) {
+            importedData.value = transformSIAUserToPayer(rawData);
+            Swal.fire('Berhasil', `Berhasil mengambil ${rawData.length} data dari RESTAPI-SIA ${url}. Sekarang pilih data yang ingin diimpor.`, 'info');
+        } else {
+            importedData.value = [];
+            Swal.fire('Informasi', 'Data API kosong atau struktur respons tidak sesuai.', 'warning');
+        }
+
+    } catch (error) {
+        console.error("Error fetching data from SIA API:", error);
+        const errorMessage = error.response ? `Gagal mengambil data: ${error.response.status} - ${error.response.statusText}` : 'Koneksi API SIA gagal.';
+        Swal.fire('Gagal Import API', errorMessage, 'error');
+    }
   
-  if (importSource.value === 'sia') {
-   // Data simulasi dari SIA (Mahasiswa Aktif)
-   newPayers = [
-    { identity_number: "20240004", npm: "20240004", name: "Dewi Kartika", study_program_code: "AK", email: "dewi.k@sia.com", payer_type: "MAHASISWA", phone_number: "081234567893", payer_group_id: 102 },
-    { identity_number: "20240005", npm: "20240005", name: "Joko Susilo", study_program_code: "MN", email: "joko.s@sia.com", payer_type: "MAHASISWA", phone_number: "081234567894", payer_group_id: null },
-    { identity_number: "20240001", npm: "20240001", name: "Budi Santoso", study_program_code: "SI", email: "budi.s@sia.com", payer_type: "MAHASISWA", phone_number: "081234567890", payer_group_id: 101 }, // Duplikat
-    { identity_number: "20240006", npm: "20240006", name: "Alif Syahputra", study_program_code: "TK", email: "alif.s@sia.com", payer_type: "MAHASISWA", phone_number: "081234567897", payer_group_id: 101 },
-    { identity_number: "20240007", npm: "20240007", name: "Citra Dewi", study_program_code: "SI", email: "citra.d@sia.com", payer_type: "MAHASISWA", phone_number: "081234567898", payer_group_id: null },
-   ];
-  } else {
-   // Data simulasi dari PMB (Calon Mahasiswa)
-   newPayers = [
-    { identity_number: "20250002", npm: null, name: "Maria Ulfa", study_program_code: "TI", email: "maria.u@pmb.com", payer_type: "CALON_MAHASISWA", phone_number: "081234567895", payer_group_id: null },
-    { identity_number: "20250003", npm: null, name: "Ahmad Yani", study_program_code: "SI", email: "ahmad.y@pmb.com", payer_type: "CALON_MAHASISWA", phone_number: "081234567896", payer_group_id: null },
-    { identity_number: "20250001", npm: null, name: "Rahmat Hidayat", study_program_code: "MI", email: "rahmat.h@pmb.com", payer_type: "CALON_MAHASISWA", phone_number: "081234567892", payer_group_id: 102 }, // Duplikat
-    { identity_number: "20250004", npm: null, name: "Sari Mulia", study_program_code: "AK", email: "sari.m@pmb.com", payer_type: "CALON_MAHASISWA", phone_number: "081234567899", payer_group_id: null },
-    { identity_number: "20250005", npm: null, name: "Zulkifli Anwar", study_program_code: "MN", email: "zul.a@pmb.com", payer_type: "CALON_MAHASISWA", phone_number: "081234567900", payer_group_id: null },
-   ];
+  } else if (importSource.value === 'pmb') {
+    // Data simulasi dari PMB (Calon Mahasiswa) - Tetap sebagai simulasi
+    const newPayers = [
+      { identity_number: "20250002", npm: null, nama_lengkap: "Maria Ulfa (PMB Sim)", jurusan: "TI", email: "maria.u@pmb.com", payer_type: "CALON_MAHASISWA", phone_number: "081234567895", payer_group_id: null },
+      { identity_number: "20250003", npm: null, nama_lengkap: "Ahmad Yani (PMB Sim)", jurusan: "SI", email: "ahmad.y@pmb.com", payer_type: "CALON_MAHASISWA", phone_number: "081234567896", payer_group_id: null },
+      { identity_number: "20250001", npm: null, nama_lengkap: "Rahmat Hidayat (Duplikat)", jurusan: "MI", email: "rahmat.h@pmb.com", payer_type: "CALON_MAHASISWA", phone_number: "081234567892", payer_group_id: 102 }, // Duplikat
+    ];
+    importedData.value = newPayers;
+    Swal.fire('Simulasi', `Berhasil mengambil ${newPayers.length} data dari RESTAPI-PMB (Simulasi). Sekarang pilih data yang ingin diimpor.`, 'info');
   }
 
-  importedData.value = newPayers;
-  selectedImportIds.value = newPayers.map(d => d.identity_number); // Default: pilih semua
   isImporting.value = false;
-
- }, 1500); // Simulasi loading API 1.5 detik
 };
 
 // TAHAP 2: Konfirmasi Import data yang dipilih
-const confirmImport = () => {
- isImporting.value = true;
- 
- setTimeout(() => {
-  let newCount = 0;
-  let duplicateCount = 0;
-  let maxId = payers.value.length ? Math.max(...payers.value.map(p => p.id)) : 0;
+const confirmImport = async () => {
+  isImporting.value = true;
   
-  // Filter data yang dipilih DAN yang bukan duplikat
+  // 1. Filter data yang dipilih DAN yang bukan duplikat
   const payersToImport = importedData.value.filter(data => 
-   selectedImportIds.value.includes(data.identity_number) && !isDuplicate(data.identity_number)
+    selectedImportIds.value.includes(data.identity_number) && !isDuplicate(data.identity_number)
   );
 
-  payersToImport.forEach(p => {
-   maxId++;
-   p.id = maxId;
-   payers.value.push(p);
-   newCount++;
-  });
-
-  // Hitung total duplikat dari data yang dipilih
-  duplicateCount = importedData.value.filter(data => 
-   selectedImportIds.value.includes(data.identity_number) && isDuplicate(data.identity_number)
+  // 2. Hitung duplikat yang diabaikan
+  let duplicateCount = importedData.value.filter(data => 
+    selectedImportIds.value.includes(data.identity_number) && isDuplicate(data.identity_number)
   ).length;
 
-  isImporting.value = false;
-  
-  Swal.fire(
-   'Import Selesai!', 
-   `Berhasil mengimpor ${newCount} data baru. (${duplicateCount} data duplikat yang dipilih diabaikan).`, 
-   'success'
-  );
-  
-  // Tutup modal setelah selesai
-  importModalVisible.value = false;
-  resetImportData();
+  try {
+      if (payersToImport.length > 0) {
+          // Operasi Batch Import (asumsi API mendukung POST array data ke /payers/batch atau sejenisnya)
+          // Karena kita tidak memiliki endpoint batch, kita akan simulasikan satu per satu.
+          
+          let successCount = 0;
+          
+          // Menggunakan Promise.all atau loop for...of untuk API POST
+          for (const payerData of payersToImport) {
+              // Hapus ID yang dibuat di sisi klien (jika ada) karena ini POST baru
+              const payload = { ...payerData };
+              delete payload.id; 
+              
+              try {
+                  // Anggap semua data yang diimpor adalah MAHASISWA/CALON MAHASISWA dari SIA/PMB
+                  await api.post('/payers', payload); 
+                  successCount++;
+              } catch (postError) {
+                  console.error(`Gagal menyimpan payer ${payerData.identity_number}:`, postError);
+                  // Lanjutkan ke data berikutnya meskipun ada yang gagal
+              }
+          }
 
- }, 1500);
+          if (successCount > 0) {
+              await fetchPayers(); // Refresh data utama setelah impor API
+          }
+
+          Swal.fire(
+            'Import Selesai!', 
+            `Berhasil mengimpor ${successCount} data baru. (${duplicateCount} data duplikat dan ${payersToImport.length - successCount} data gagal diimpor diabaikan).`, 
+            'success'
+          );
+
+      } else {
+           Swal.fire('Informasi', `Tidak ada data baru yang dipilih atau semua data yang dipilih merupakan duplikat (${duplicateCount} duplikat diabaikan).`, 'info');
+      }
+
+  } catch (error) {
+      Swal.fire('Gagal Import', 'Terjadi kesalahan saat memproses impor data.', 'error');
+  } finally {
+      isImporting.value = false;
+      // Tutup modal setelah selesai
+      importModalVisible.value = false;
+      resetImportData();
+  }
 };
 
 </script>

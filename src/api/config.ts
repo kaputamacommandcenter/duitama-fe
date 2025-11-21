@@ -6,5 +6,7 @@ export const api = axios.create({
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
+    "Accept": "application/json",
+    "X-API-KEY": "ckey_TZlsLgiC90mhmS7BMQVlKP6pDmQ0poFLjZexjhA8",
   },
 })

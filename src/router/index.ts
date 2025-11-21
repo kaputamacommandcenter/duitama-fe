@@ -10,12 +10,6 @@ const routes = [
   { path: '/forgot-password', name: 'forgot-password', component: () => import('../pages/ForgotPassword.vue') },
   { path: '/reset-password', name: 'reset-password', component: () => import('../pages/ResetPassword.vue') },
 
-  // =======================================================
-  // PROTECTED ROUTES
-  // =======================================================
-  // =======================================================
-// PROTECTED ROUTES (SUDAH DIPERBAIKI)
-// =======================================================
 {
   path: '/dashboard', name: 'dashboard', component: () => import('../layouts/DashboardLayout.vue'),
   meta: {
