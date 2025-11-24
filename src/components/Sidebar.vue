@@ -122,8 +122,8 @@ const menuItems: MenuItem[] = [
     name: "Kelola Pembayar",
     icon: "fa-solid fa-gear",
     children: [
-      {id: "data-pembayar",name: "Data Pembayar",icon: "fa-solid fa-user",link: "/dashboard/data-pembayar"},
-      {id: "kelompok-pembayar",name: "Kelompok Pembayar",icon: "fa-solid fa-users",link: "/dashboard/kelompok-pembayar"},
+      {id: "payers",name: "Data Pembayar",icon: "fa-solid fa-user",link: "/dashboard/payers"},
+      {id: "payer-groups",name: "Kelompok Pembayar",icon: "fa-solid fa-users",link: "/dashboard/payer-groups"},
     ]
   }
 ]

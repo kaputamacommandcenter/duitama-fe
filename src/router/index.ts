@@ -49,7 +49,7 @@ const routes = [
       }
     },
     {
-      path: 'kelompok-pembayar', name: 'kelompok-pembayar', component: () => import('../pages/KelompokPembayar.vue'),
+      path: 'payer-groups', name: 'payer-groups', component: () => import('../pages/payer/PayerGroupsPage.vue'),
       meta: {
         breadcrumb: [
           { name: "Dashboard", link: "/dashboard" },
@@ -59,7 +59,7 @@ const routes = [
       }
     },
     {
-      path: 'data-pembayar', name: 'data-pembayar', component: () => import('../pages/DataPembayar.vue'),
+      path: 'payers', name: 'payers', component: () => import('../pages/payer/PayersPage.vue'),
       meta: {
         breadcrumb: [
           { name: "Dashboard", link: "/dashboard" },
@@ -68,14 +68,13 @@ const routes = [
         ]
       }
     },
-    // Detail Kelompok (Sudah benar)
     {
-      path: 'kelompok/detail/:id', name: 'detail-kelompok', component: () => import('../pages/KelompokDetailPage.vue'),
+      path: 'payer-group-detail/:id', name: 'payer-group-detail', component: () => import('../pages/payer/PayerGroupDetail.vue'),
       meta: {
         breadcrumb: [
           { name: "Dashboard", link: "/dashboard" },
-          { name: "Kelompok Payer", link: "/dashboard/kelompok-payer" },
-          { name: "Detail Kelompok" }
+          { name: "Kelola Pembayar" },
+          { name: "Kelompok Pembayar" }
         ]
       }
     },
