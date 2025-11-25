@@ -1,21 +1,22 @@
 <template>
   <div class="modal" :class="{ 'modal-open': visible }">
     <div class="modal-box w-11/12 max-w-5xl">
-      <h3 class="font-bold text-lg mb-4">Import Data Pembayar dari REST API SIA</h3>
+      <h3 class="font-bold text-lg mb-4">Import Data Pembayar dari REST API PMB</h3>
 
-      <!-- Input Form API SIA -->
+      <!-- Input Form API PMB -->
       <div class="card bg-base-200 p-4 mb-4">
-        <h4 class="font-semibold mb-2">Pilih Data yang Akan Diimpor</h4>
-        <form @submit.prevent="fetchDataSIA" class="flex flex-wrap items-end gap-3">
+        <h4 class="font-semibold mb-2">Masukkan Tahun Ajaran untuk Memuat Data Calon Mahasiswa Terverifikasi</h4>
+        <form @submit.prevent="fetchDataPMB" class="flex flex-wrap items-end gap-3">
           
           <label class="form-control flex-grow">
-            <div class="label"><span class="label-text">Parameter Pencarian (Contoh: 25441001/Indra/2025)</span></div>
-            <input type="text" v-model="searchParam" placeholder="Masukkan NPM/Nama/Angkatan" class="input input-bordered w-full" required :disabled="loading" />
+            <!-- Diubah untuk meminta Tahun Ajaran -->
+            <div class="label"><span class="label-text">Tahun Ajaran (Contoh: 2025/2026)</span></div>
+            <input type="text" v-model="searchParam" placeholder="Contoh: 2025/2026" class="input input-bordered w-full" required :disabled="loading" />
           </label>
 
           <button type="submit" class="btn btn-info w-full md:w-auto" :disabled="loading">
             <span v-if="loading" class="loading loading-spinner"></span>
-            <span v-else>Cari & Muat Data</span>
+            <span v-else>Muat Data Calon Mhs</span>
           </button>
         </form>
       </div>
@@ -24,7 +25,7 @@
       <div class="max-h-96 overflow-y-auto border rounded-box p-3">
         <div v-if="loading" class="text-center py-10">
           <span class="loading loading-spinner loading-lg text-info"></span>
-          <p class="mt-2 text-gray-500">Mengambil data dari API SIA...</p>
+          <p class="mt-2 text-gray-500">Mengambil data dari API PMB...</p>
         </div>
         
         <div v-else-if="fetchedData.length > 0">
@@ -35,11 +36,11 @@
                 <th class="w-16">
                     <input type="checkbox" class="checkbox checkbox-sm" @change="toggleSelectAll" :checked="allSelected" />
                 </th>
-                <th>NPM</th>
-                <th>Nama</th>
-                <th>Prodi</th>
+                <th>No. Pendaftaran</th>
+                <th>Nama Calon</th>
+                <th>Prodi Pilihan</th>
                 <th>Email</th>
-                <th>No. Telp</th>
+                <th>No. Telepon</th>
               </tr>
             </thead>
             <tbody>
@@ -47,10 +48,10 @@
                 <th>
                     <input type="checkbox" class="checkbox checkbox-sm" :value="data" v-model="selectedData" />
                 </th>
-                <td>{{ data.npm }}</td>
+                <td>{{ data.register_number || 'N/A' }}</td>
                 <td class="font-medium">{{ data.nama }}</td>
                 <td>{{ data.prodi_kode || '-' }}</td>
-                <td>{{ data.email_sia || '-' }}</td>
+                <td>{{ data.email_pmb || '-' }}</td>
                 <td>{{ data.phone_number || '-' }}</td>
               </tr>
             </tbody>
@@ -58,7 +59,7 @@
         </div>
 
         <div v-else class="text-center py-10 text-gray-500">
-          Masukkan parameter dan klik "Cari & Muat Data"
+          Masukkan Tahun Ajaran dan klik "Muat Data Calon Mhs"
         </div>
       </div>
 
@@ -79,9 +80,9 @@
 <script setup>
 import { ref, computed } from 'vue';
 import Swal from 'sweetalert2';
-// PERBAIKAN: Mengimpor instance 'sia' dan 'api' (untuk menyimpan ke DB lokal)
+// Mengimpor instance 'api' (untuk menyimpan ke DB lokal) dan 'pmb' (untuk fetch data PMB)
 import { api } from '../../api/config'; 
-import { sia } from '../../api/sia'; 
+import { pmb } from '../../api/pmb'; 
 
 const props = defineProps({
   visible: Boolean,
@@ -91,16 +92,15 @@ const emit = defineEmits(['close', 'imported']);
 
 const loading = ref(false);
 const importing = ref(false);
+// searchParam kini memegang nilai Tahun Ajaran
 const searchParam = ref(''); 
 const fetchedData = ref([]);
 const selectedData = ref([]);
 
-// Computed property untuk cek apakah semua data terpilih
 const allSelected = computed(() => {
     return fetchedData.value.length > 0 && selectedData.value.length === fetchedData.value.length;
 });
 
-// Fungsi untuk memilih/membatalkan semua data
 const toggleSelectAll = () => {
     if (allSelected.value) {
         selectedData.value = [];
@@ -110,10 +110,10 @@ const toggleSelectAll = () => {
 };
 
 
-// === FETCH DATA SIA ===
-const fetchDataSIA = async () => {
+// === FETCH DATA PMB ===
+const fetchDataPMB = async () => {
     if (!searchParam.value) {
-        Swal.fire('Perhatian', 'Harap masukkan parameter pencarian.', 'warning');
+        Swal.fire('Perhatian', 'Harap masukkan Tahun Ajaran.', 'warning');
         return;
     }
     
@@ -122,42 +122,48 @@ const fetchDataSIA = async () => {
     selectedData.value = [];
 
     try {
-        // PERBAIKAN: Menggunakan instance 'sia'
-        // ASUMSI: Endpoint API SIA yang digunakan adalah untuk mencari mahasiswa berdasarkan NPM
-        const res = await sia.get(`mahasiswa/search`, { // Endpoint relatif: 'mahasiswa/search'
+        // PERUBAHAN ENDPOINT DAN PARAMETER
+        const res = await pmb.get(`get-verified-maba`, {
             params: {
-                keyword: searchParam.value
+                tahunAjaran: searchParam.value
             }
         });
 
-        const rawData = res.data.data || res.data;
+        // ASUMSI: Respons API PMB mengembalikan array data langsung
+        const rawData = res.data.data || res.data; 
         
+        // Fungsi helper untuk memetakan data tunggal
+        const mapData = (d) => ({
+            // Pemetaan sesuai struktur respons PMB yang baru
+            register_number: d.register_number, // Digunakan di tabel
+            nama: d.nama_lengkap || 'Tidak Ada Nama',
+            email_pmb: d.email || '',
+            prodi_kode: d.kode_prodi || '', 
+            phone_number: d.tlp || '',
+            
+            // Data untuk DB Payer lokal
+            identity_number: d.register_number, // Kunci unik untuk Payer
+            payer_type: 'calon_mahasiswa', // Tipe Payer: Calon Mahasiswa
+        });
+
+
         if (Array.isArray(rawData)) {
-            fetchedData.value = rawData.map(d => ({
-                nama: d.nama_lengkap || 'Tidak Ada Nama',
-                npm: d.npm || 'Tidak Ada NPM',
-                email_sia: d.email || '',
-                prodi_kode: d.nama_jur || '',
-                payer_type: 'mahasiswa', 
-                phone_number: d.no_telp || '',
-            }));
-        } else if (rawData && typeof rawData === 'object') {
-            fetchedData.value = [{
-                nama: rawData.nama_mahasiswa || rawData.nama || 'Tidak Ada Nama',
-                npm: rawData.npm || rawData.nim || 'Tidak Ada NPM',
-                email_sia: rawData.email || '',
-                prodi_kode: rawData.kode_prodi || '',
-                identity_number: rawData.npm || rawData.nim,
-                payer_type: 'mahasiswa',
-                phone_number: rawData.telepon || '',
-            }];
+            // Filter data yang mungkin memiliki register_number null jika itu adalah kunci unik
+            fetchedData.value = rawData
+                .filter(d => d.register_number) // Hanya proses yang memiliki No. Pendaftaran
+                .map(mapData);
+            
+            if (fetchedData.value.length === 0) {
+                 Swal.fire('Informasi', 'Tidak ada calon mahasiswa terverifikasi ditemukan untuk Tahun Ajaran ini.', 'info');
+            }
+            
         } else {
-            Swal.fire('Informasi', 'Data tidak ditemukan di API SIA.', 'info');
+            Swal.fire('Informasi', 'Data tidak ditemukan atau format respons API tidak sesuai.', 'info');
         }
 
     } catch (err) {
-        console.error("Error fetching data from SIA API:", err);
-        Swal.fire('Error', 'Gagal terhubung atau memuat data dari API SIA. Cek konsol untuk detail error.', 'error');
+        console.error("Error fetching data from PMB API:", err);
+        Swal.fire('Error', 'Gagal terhubung atau memuat data dari API PMB. Cek konsol untuk detail error.', 'error');
     } finally {
         loading.value = false;
     }
@@ -175,20 +181,21 @@ const importSelectedData = async () => {
         // Payload untuk diimpor ke endpoint 'payers' lokal
         const payerPayload = {
             payer_name: data.nama,
-            identity_number: data.identity_number, 
+            // Gunakan register_number sebagai kunci identitas utama (identity_number)
+            identity_number: data.register_number, 
             payer_type: data.payer_type, 
-            email: data.email_sia,
+            email: data.email_pmb,
             phone_number: data.phone_number,
             study_program_code: data.prodi_kode,
         };
 
         try {
-            // PERBAIKAN: Menggunakan instance 'api' untuk menyimpan ke DB lokal
+            // Menggunakan instance 'api' untuk menyimpan ke DB lokal
             await api.post("payers", payerPayload);
             successCount++;
         } catch (err) {
             failCount++;
-            console.error(`Gagal mengimpor ${data.nama}:`, err.response?.data?.message || err.message);
+            console.error(`Gagal mengimpor ${data.nama} (ID: ${data.identity_number}):`, err.response?.data?.message || err.message);
         }
     });
 

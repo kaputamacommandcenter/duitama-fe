@@ -1,4 +1,3 @@
-// src/api/sia.ts
 import axios from "axios"
 
 export const sia = axios.create({

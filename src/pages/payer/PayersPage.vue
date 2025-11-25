@@ -8,15 +8,26 @@
       <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
         <h2 class="text-xl font-medium">Daftar Pembayar</h2>
 
+        <!-- START: Grup Aksi di Kanan -->
         <div class="flex flex-wrap gap-2">
-          <button class="btn btn-warning btn-sm flex items-center gap-2 w-full md:w-auto" @click="openImportModal">
-            <i class="fa-solid fa-file-import"></i> Import Data
-          </button>
+            <!-- Tombol Dropdown Import -->
+            <div class="dropdown dropdown-end w-full md:w-auto">
+                <label tabindex="0" class="btn btn-warning btn-sm flex items-center gap-2 w-full md:w-auto">
+                    <i class="fa-solid fa-file-import"></i> Import Data
+                </label>
+                <!-- Konten Dropdown -->
+                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                    <li><a @click="openImportModal('sia')">Dari API SIA (Mahasiswa)</a></li>
+                    <li><a @click="openImportModal('pmb')">Dari API PMB (Calon Mhs)</a></li>
+                </ul>
+            </div>
+
 
           <button class="btn btn-primary btn-sm flex items-center gap-2 w-full md:w-auto" @click="openAddForm">
             <i class="fa-solid fa-plus"></i> Tambah Payer
           </button>
         </div>
+        <!-- END: Grup Aksi di Kanan -->
       </div>
 
       <!-- FILTER BAR -->
@@ -143,11 +154,19 @@
       @saved="afterSave"
     />
 
-    <!-- PERBAIKAN: IMPORT MODAL (menggunakan komponen terpisah) -->
+    <!-- MODAL IMPORT DATA SIA -->
     <ImportDataSIA
-      v-if="importModalVisible"
-      :visible="importModalVisible"
-      @close="closeImportModal"
+      v-if="importSiaModalVisible"
+      :visible="importSiaModalVisible"
+      @close="closeImportModal('sia')"
+      @imported="afterSave"
+    />
+
+    <!-- MODAL IMPORT DATA PMB -->
+    <ImportDataPMB
+      v-if="importPmbModalVisible"
+      :visible="importPmbModalVisible"
+      @close="closeImportModal('pmb')"
       @imported="afterSave"
     />
   </div>
@@ -157,10 +176,11 @@
 import { api } from "../../api/config";
 import Swal from "sweetalert2";
 import PayerFormModal from "../../components/payer/PayerForm.vue";
-import ImportDataSIA from "../../components/payer/ImportDataSIA.vue";
+import ImportDataSIA from "../../components/payer/ImportDataSIA.vue"; 
+import ImportDataPMB from "../../components/payer/ImportDataPMB.vue"; // Impor komponen PMB
 
 export default {
-  components: { PayerFormModal, ImportDataSIA }, // Daftarkan komponen baru
+  components: { PayerFormModal, ImportDataSIA, ImportDataPMB }, // Daftarkan komponen PMB
 
   data() {
     return {
@@ -171,7 +191,10 @@ export default {
       modalVisible: false,
       formMode: "add",
       currentPayer: {},
-      importModalVisible: false, // Digunakan untuk ImportDataSIA
+      
+      // State baru untuk modal import
+      importSiaModalVisible: false, 
+      importPmbModalVisible: false,
 
       // Pagination + Sorting + Search
       searchQuery: "",
@@ -275,12 +298,25 @@ export default {
       this.modalVisible = false;
     },
 
-    openImportModal() {
-      this.importModalVisible = true;
+    // Metode untuk membuka modal import (SIA atau PMB)
+    openImportModal(source) {
+      this.importSiaModalVisible = false;
+      this.importPmbModalVisible = false;
+
+      if (source === 'sia') {
+        this.importSiaModalVisible = true;
+      } else if (source === 'pmb') {
+        this.importPmbModalVisible = true;
+      }
     },
     
-    closeImportModal() { // Metode baru untuk menutup modal import
-      this.importModalVisible = false;
+    // Metode untuk menutup modal import
+    closeImportModal(source) {
+      if (source === 'sia') {
+        this.importSiaModalVisible = false;
+      } else if (source === 'pmb') {
+        this.importPmbModalVisible = false;
+      }
     },
 
     async confirmDelete(id) {
@@ -320,7 +356,8 @@ export default {
 
     async afterSave() {
       this.modalVisible = false;
-      this.importModalVisible = false; // Tutup juga modal import jika dipanggil setelah import
+      this.importSiaModalVisible = false;
+      this.importPmbModalVisible = false;
       await this.fetchPayers();
     },
   },

@@ -19,7 +19,6 @@ const routes = [
     ]
   },
   children: [
-    // Home (Path kosong, menjadi /dashboard)
     {
       path: '', name: 'dashboard-home', component: () => import('../pages/DashboardHome.vue'),
       meta: {
