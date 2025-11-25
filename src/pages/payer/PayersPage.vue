@@ -95,7 +95,7 @@
               <td>{{ p.phone_number }}</td>
 
               <td>
-                <span v-if="p.payer_group_id" class="text-gray-600">
+                <span v-if="p.payer_group_id && p.payer_group">
                   {{ p.payer_group.group_name }}
                 </span>
                 <span v-else class="text-gray-400">-</span>
@@ -143,14 +143,13 @@
       @saved="afterSave"
     />
 
-    <!-- IMPORT MODAL -->
-    <input type="checkbox" id="modalImportData" class="modal-toggle" :checked="importModalVisible" />
-    <div class="modal" :class="{ 'modal-open': importModalVisible }">
-      <div class="modal-box w-11/12 max-w-5xl">
-        <h3 class="font-bold text-lg mb-4">Import Data Pembayar</h3>
-        <slot />
-      </div>
-    </div>
+    <!-- PERBAIKAN: IMPORT MODAL (menggunakan komponen terpisah) -->
+    <ImportDataSIA
+      v-if="importModalVisible"
+      :visible="importModalVisible"
+      @close="closeImportModal"
+      @imported="afterSave"
+    />
   </div>
 </template>
 
@@ -158,9 +157,10 @@
 import { api } from "../../api/config";
 import Swal from "sweetalert2";
 import PayerFormModal from "../../components/payer/PayerForm.vue";
+import ImportDataSIA from "../../components/payer/ImportDataSIA.vue";
 
 export default {
-  components: { PayerFormModal },
+  components: { PayerFormModal, ImportDataSIA }, // Daftarkan komponen baru
 
   data() {
     return {
@@ -171,7 +171,7 @@ export default {
       modalVisible: false,
       formMode: "add",
       currentPayer: {},
-      importModalVisible: false,
+      importModalVisible: false, // Digunakan untuk ImportDataSIA
 
       // Pagination + Sorting + Search
       searchQuery: "",
@@ -245,7 +245,7 @@ export default {
         this.payers = res.data.data || [];
       } catch (err) {
         console.error(err);
-        alert("Gagal memuat data payer!");
+        Swal.fire("Error", "Gagal memuat data payer!", "error");
       } finally {
         this.isFetchingMainData = false;
       }
@@ -256,7 +256,7 @@ export default {
       this.currentPayer = {
         payer_name: "",
         identity_number: "",
-        payer_type: "",
+        payer_type: "etc", // Set default type
         email: "",
         phone_number: "",
         payer_group_id: null,
@@ -273,6 +273,14 @@ export default {
 
     closeModal() {
       this.modalVisible = false;
+    },
+
+    openImportModal() {
+      this.importModalVisible = true;
+    },
+    
+    closeImportModal() { // Metode baru untuk menutup modal import
+      this.importModalVisible = false;
     },
 
     async confirmDelete(id) {
@@ -312,11 +320,8 @@ export default {
 
     async afterSave() {
       this.modalVisible = false;
+      this.importModalVisible = false; // Tutup juga modal import jika dipanggil setelah import
       await this.fetchPayers();
-    },
-
-    openImportModal() {
-      this.importModalVisible = true;
     },
   },
 
