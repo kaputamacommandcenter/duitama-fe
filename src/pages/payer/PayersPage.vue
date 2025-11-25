@@ -44,7 +44,7 @@
         <input
           type="text"
           v-model="searchQuery"
-          placeholder="Cari nama / NPM / email / kelompok ..."
+          placeholder="Cari semua kolom (nama, id, npm, email, tipe, dll...)"
           class="input input-bordered w-full md:w-64"
         />
 
@@ -61,6 +61,7 @@
         <table class="table w-full table-zebra">
           <thead>
             <tr>
+              <th>No.</th> <!-- TAMBAH KOLOM NOMOR URUT -->
               <th>ID/NPM</th>
               <th @click="toggleSort" class="cursor-pointer flex items-center gap-2">
                 Nama Lengkap
@@ -77,19 +78,20 @@
 
           <tbody>
             <tr v-if="isFetchingMainData">
-              <td colspan="8" class="text-center py-8">
+              <td colspan="9" class="text-center py-8"> <!-- UBAH COLSPAN MENJADI 9 -->
                 <span class="loading loading-spinner loading-lg text-primary"></span>
                 <p class="mt-2 text-gray-500">Memuat Data Pembayar...</p>
               </td>
             </tr>
 
             <tr v-else-if="pagedData.length === 0">
-              <td colspan="8" class="text-center py-4 text-gray-500">
+              <td colspan="9" class="text-center py-4 text-gray-500"> <!-- UBAH COLSPAN MENJADI 9 -->
                 Tidak ada data ditemukan.
               </td>
             </tr>
 
-            <tr v-for="p in pagedData" :key="p.id">
+            <tr v-for="(p, index) in pagedData" :key="p.id">
+              <td>{{ getRowNumber(index) }}</td> <!-- TAMPILKAN NOMOR URUT -->
               <td>
                 <span class="font-bold">{{ p.identity_number || '-' }}</span><br />
                 <span class="text-xs opacity-50">{{ p.npm || '-' }}</span>
@@ -129,8 +131,9 @@
       <div class="flex justify-center mt-4 gap-2">
         <button class="btn btn-sm" :disabled="page === 1" @click="page--">« Prev</button>
 
+        <!-- MENGGUNAKAN displayedPages untuk membatasi tombol yang ditampilkan -->
         <button
-          v-for="i in totalPages"
+          v-for="i in displayedPages"
           :key="i"
           class="btn btn-sm"
           :class="{ 'btn-primary': page === i }"
@@ -177,10 +180,10 @@ import { api } from "../../api/config";
 import Swal from "sweetalert2";
 import PayerFormModal from "../../components/payer/PayerForm.vue";
 import ImportDataSIA from "../../components/payer/ImportDataSIA.vue"; 
-import ImportDataPMB from "../../components/payer/ImportDataPMB.vue"; // Impor komponen PMB
+import ImportDataPMB from "../../components/payer/ImportDataPMB.vue"; 
 
 export default {
-  components: { PayerFormModal, ImportDataSIA, ImportDataPMB }, // Daftarkan komponen PMB
+  components: { PayerFormModal, ImportDataSIA, ImportDataPMB },
 
   data() {
     return {
@@ -192,11 +195,9 @@ export default {
       formMode: "add",
       currentPayer: {},
       
-      // State baru untuk modal import
       importSiaModalVisible: false, 
       importPmbModalVisible: false,
 
-      // Pagination + Sorting + Search
       searchQuery: "",
       sortOrder: "asc",
       perPage: 10,
@@ -217,12 +218,29 @@ export default {
       let q = this.searchQuery.toLowerCase();
 
       return this.payers.filter((p) => {
+        const groupName = p.payer_group?.group_name || "";
+        const studyProgram = p.study_program_code || "";
+        const email = p.email || "";
+        const phoneNumber = p.phone_number || "";
+        const identityNumber = p.identity_number || "";
+        const npm = p.npm || "";
+
         return (
+          // Cek Nama Payer
           p.payer_name.toLowerCase().includes(q) ||
-          (p.npm || "").toLowerCase().includes(q) ||
-          (p.email || "").toLowerCase().includes(q) ||
-          (p.phone_number || "").toLowerCase().includes(q) ||
-          (p.payer_group?.group_name || "").toLowerCase().includes(q)
+          // Cek ID/NPM
+          identityNumber.toLowerCase().includes(q) ||
+          npm.toLowerCase().includes(q) ||
+          // Cek Email
+          email.toLowerCase().includes(q) ||
+          // Cek Nomor Telepon
+          phoneNumber.toLowerCase().includes(q) ||
+          // Cek Kelompok
+          groupName.toLowerCase().includes(q) ||
+          // Cek Tipe
+          (p.payer_type || "").toLowerCase().includes(q) ||
+          // Cek Program Studi
+          studyProgram.toLowerCase().includes(q)
         );
       });
     },
@@ -243,7 +261,46 @@ export default {
     },
 
     totalPages() {
-      return Math.ceil(this.sortedData.length / this.perPage);
+      // Pastikan totalPages minimal 1 agar tidak terjadi error pada loop
+      return Math.max(1, Math.ceil(this.sortedData.length / this.perPage));
+    },
+    
+    // LOGIC BARU: Menghitung halaman yang akan ditampilkan (maksimum 5)
+    displayedPages() {
+        const maxPages = 5; 
+        const totalPages = this.totalPages;
+        let startPage;
+        let endPage;
+
+        if (totalPages <= maxPages) {
+            // Tampilkan semua jika total halaman sedikit
+            startPage = 1;
+            endPage = totalPages;
+        } else {
+            // Posisikan halaman aktif di tengah
+            const middle = Math.ceil(maxPages / 2);
+
+            if (this.page <= middle) {
+                // Dekat awal
+                startPage = 1;
+                endPage = maxPages;
+            } else if (this.page + middle > totalPages) {
+                // Dekat akhir
+                startPage = totalPages - maxPages + 1;
+                endPage = totalPages;
+            } else {
+                // Di tengah
+                startPage = this.page - Math.floor(maxPages / 2);
+                endPage = this.page + Math.ceil(maxPages / 2) - 1;
+            }
+        }
+        
+        // Buat array halaman yang akan di-loop di template
+        const pages = [];
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(i);
+        }
+        return pages;
     },
   },
 
@@ -254,11 +311,22 @@ export default {
     perPage() {
       this.page = 1;
     },
+    // Watch totalPages untuk menyesuaikan halaman aktif jika datanya berkurang
+    totalPages(newVal) {
+      if (this.page > newVal) {
+        this.page = newVal;
+      }
+    }
   },
 
   methods: {
     toggleSort() {
       this.sortOrder = this.sortOrder === "asc" ? "desc" : "asc";
+    },
+
+    // Metode baru untuk menghitung nomor urut baris
+    getRowNumber(index) {
+      return (this.page - 1) * this.perPage + index + 1;
     },
 
     async fetchPayers() {
@@ -279,7 +347,7 @@ export default {
       this.currentPayer = {
         payer_name: "",
         identity_number: "",
-        payer_type: "etc", // Set default type
+        payer_type: "etc",
         email: "",
         phone_number: "",
         payer_group_id: null,
@@ -298,7 +366,6 @@ export default {
       this.modalVisible = false;
     },
 
-    // Metode untuk membuka modal import (SIA atau PMB)
     openImportModal(source) {
       this.importSiaModalVisible = false;
       this.importPmbModalVisible = false;
@@ -310,7 +377,6 @@ export default {
       }
     },
     
-    // Metode untuk menutup modal import
     closeImportModal(source) {
       if (source === 'sia') {
         this.importSiaModalVisible = false;

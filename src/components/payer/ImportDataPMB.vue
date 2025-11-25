@@ -48,6 +48,7 @@
                 <th>
                     <input type="checkbox" class="checkbox checkbox-sm" :value="data" v-model="selectedData" />
                 </th>
+                <!-- Menampilkan register_number (bisa null) -->
                 <td>{{ data.register_number || 'N/A' }}</td>
                 <td class="font-medium">{{ data.nama }}</td>
                 <td>{{ data.prodi_kode || '-' }}</td>
@@ -109,6 +110,18 @@ const toggleSelectAll = () => {
     }
 };
 
+// Fungsi kustom untuk mencegah encoding karakter '/'
+const customParamsSerializer = (params) => {
+    const searchParams = new URLSearchParams();
+    for (const key in params) {
+        if (Object.prototype.hasOwnProperty.call(params, key)) {
+            searchParams.append(key, params[key]);
+        }
+    }
+    // Mengganti semua encoded forward slash (%2F) kembali ke slash (/)
+    return searchParams.toString().replace(/%2F/g, '/');
+};
+
 
 // === FETCH DATA PMB ===
 const fetchDataPMB = async () => {
@@ -122,36 +135,40 @@ const fetchDataPMB = async () => {
     selectedData.value = [];
 
     try {
-        // PERUBAHAN ENDPOINT DAN PARAMETER
+        // Menerapkan paramsSerializer kustom
         const res = await pmb.get(`get-verified-maba`, {
             params: {
                 tahunAjaran: searchParam.value
-            }
+            },
+            paramsSerializer: customParamsSerializer // Menerapkan custom serializer di sini
         });
 
         // ASUMSI: Respons API PMB mengembalikan array data langsung
         const rawData = res.data.data || res.data; 
         
         // Fungsi helper untuk memetakan data tunggal
-        const mapData = (d) => ({
-            // Pemetaan sesuai struktur respons PMB yang baru
-            register_number: d.register_number, // Digunakan di tabel
-            nama: d.nama_lengkap || 'Tidak Ada Nama',
-            email_pmb: d.email || '',
-            prodi_kode: d.kode_prodi || '', 
-            phone_number: d.tlp || '',
-            
-            // Data untuk DB Payer lokal
-            identity_number: d.register_number, // Kunci unik untuk Payer
-            payer_type: 'calon_mahasiswa', // Tipe Payer: Calon Mahasiswa
-        });
+        const mapData = (d, index) => {
+            // Logika baru: Jika register_number null, buat ID sementara unik
+            const tempId = `PMB-TEMP-${Date.now().toString().slice(-6)}-${index + 1}`;
+            const identity = d.register_number || tempId;
+
+            return {
+                register_number: d.register_number, 
+                nama: d.nama_lengkap || 'Tidak Ada Nama',
+                email_pmb: d.email || '',
+                prodi_kode: d.kode_prodi || '', 
+                phone_number: d.tlp || '',
+                
+                // Data untuk DB Payer lokal
+                identity_number: identity, // Pastikan selalu string unik atau register_number
+                payer_type: 'calon_mahasiswa', 
+            };
+        };
 
 
         if (Array.isArray(rawData)) {
-            // Filter data yang mungkin memiliki register_number null jika itu adalah kunci unik
-            fetchedData.value = rawData
-                .filter(d => d.register_number) // Hanya proses yang memiliki No. Pendaftaran
-                .map(mapData);
+            // Menerapkan mapping, mengirim index ke mapData untuk membantu membuat ID unik sementara
+            fetchedData.value = rawData.map(mapData);
             
             if (fetchedData.value.length === 0) {
                  Swal.fire('Informasi', 'Tidak ada calon mahasiswa terverifikasi ditemukan untuk Tahun Ajaran ini.', 'info');
@@ -176,37 +193,78 @@ const importSelectedData = async () => {
     importing.value = true;
     let successCount = 0;
     let failCount = 0;
+    let failedMessages = []; // Menyimpan pesan kegagalan
+    let successMessages = []; // Menyimpan pesan keberhasilan
+
     
     const importPromises = selectedData.value.map(async (data) => {
-        // Payload untuk diimpor ke endpoint 'payers' lokal
         const payerPayload = {
+            payer_group_id: null, 
+            identity_number: data.identity_number, 
+            npm: null, 
             payer_name: data.nama,
-            // Gunakan register_number sebagai kunci identitas utama (identity_number)
-            identity_number: data.register_number, 
-            payer_type: data.payer_type, 
-            email: data.email_pmb,
-            phone_number: data.phone_number,
             study_program_code: data.prodi_kode,
+            email: data.email_pmb,
+            payer_type: data.payer_type, 
+            phone_number: data.phone_number,
         };
 
         try {
-            // Menggunakan instance 'api' untuk menyimpan ke DB lokal
-            await api.post("payers", payerPayload);
+            const response = await api.post("payers", payerPayload);
             successCount++;
+            // Ambil pesan sukses dari respons, jika ada (misal dari response.data.message)
+            const successMessage = response.data?.message || 'Berhasil disimpan.';
+            successMessages.push(`${data.nama}: ${successMessage}`);
         } catch (err) {
             failCount++;
-            console.error(`Gagal mengimpor ${data.nama} (ID: ${data.identity_number}):`, err.response?.data?.message || err.message);
+            // Tangkap pesan error dari respons API
+            const errorMessage = err.response?.data?.message || err.message || "Kesalahan tak terduga";
+            failedMessages.push(`${data.nama} (ID: ${data.identity_number || 'N/A'}): ${errorMessage}`);
+            console.error(`Gagal mengimpor ${data.nama}:`, err);
         }
     });
 
     await Promise.all(importPromises);
     importing.value = false;
 
+    // --- Pembuatan pesan hasil ---
+
+    // 1. Pesan Keberhasilan (optional)
+    // Biasanya dihilangkan untuk ringkasan, kecuali API memberikan pesan yang sangat spesifik
+    /*
+    let successHtml = '';
+    if (successCount > 0) {
+        successHtml = `
+            <p class="mt-4 text-left font-medium text-green-700">Detail Keberhasilan:</p>
+            <div class="max-h-24 overflow-y-auto p-2 bg-green-100 rounded text-sm text-left">
+                <ul>
+                    ${successMessages.map(msg => `<li>• ${msg}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    */
+    
+    // 2. Pesan Kegagalan (MANDATORY)
+    let failureHtml = '';
+    if (failCount > 0) {
+        failureHtml = `
+            <p class="mt-4 text-left font-medium">Detail Kegagalan:</p>
+            <div class="max-h-32 overflow-y-auto p-2 bg-red-100 rounded text-sm text-red-700 text-left">
+                <ul>
+                    ${failedMessages.map(msg => `<li>• ${msg}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+
     Swal.fire({
-        icon: 'success',
+        icon: failCount === 0 ? 'success' : 'warning',
         title: 'Impor Selesai!',
-        html: `Berhasil mengimpor <b>${successCount}</b> data.<br>Gagal: <b>${failCount}</b> data (Mungkin karena duplikasi ID).`,
-        confirmButtonText: 'OK'
+        // Tampilkan ringkasan dan detail kegagalan
+        html: `Berhasil mengimpor <b>${successCount}</b> data.<br>Gagal: <b>${failCount}</b> data. ${failureHtml}`,
+        confirmButtonText: 'OK',
+        width: failCount > 0 ? 600 : 400
     });
 
     // Reset dan tutup modal
