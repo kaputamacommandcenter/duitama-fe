@@ -6,7 +6,8 @@
 
       <!-- HEADER + AKSI -->
       <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
-        <h2 class="text-xl font-medium">Daftar Pembayar</h2>
+        <!-- PERUBAHAN: Menampilkan jumlah data yang difilter/disortir -->
+        <h2 class="text-xl font-medium">Daftar Pembayar ({{ sortedData.length }} Data)</h2>
 
         <!-- START: Grup Aksi di Kanan -->
         <div class="flex flex-wrap gap-2">
@@ -103,7 +104,7 @@
                 <div class="badge">{{ p.payer_type }}</div>
               </td>
 
-              <td>{{ p.study_program_code || '-' }}</td>
+              <td>{{ p.study_program.study_program_name || '-' }}</td>
               <td>{{ p.email }}</td>
               <td>{{ p.phone_number }}</td>
 
@@ -184,7 +185,6 @@ import ImportDataPMB from "../../components/payer/ImportDataPMB.vue";
 
 export default {
   components: { PayerFormModal, ImportDataSIA, ImportDataPMB },
-
   data() {
     return {
       payers: [],
@@ -225,21 +225,15 @@ export default {
         const identityNumber = p.identity_number || "";
         const npm = p.npm || "";
 
+        // Logika OR untuk mencocokkan query 'q' dengan SEMUA kolom
         return (
-          // Cek Nama Payer
           p.payer_name.toLowerCase().includes(q) ||
-          // Cek ID/NPM
           identityNumber.toLowerCase().includes(q) ||
           npm.toLowerCase().includes(q) ||
-          // Cek Email
           email.toLowerCase().includes(q) ||
-          // Cek Nomor Telepon
           phoneNumber.toLowerCase().includes(q) ||
-          // Cek Kelompok
           groupName.toLowerCase().includes(q) ||
-          // Cek Tipe
           (p.payer_type || "").toLowerCase().includes(q) ||
-          // Cek Program Studi
           studyProgram.toLowerCase().includes(q)
         );
       });

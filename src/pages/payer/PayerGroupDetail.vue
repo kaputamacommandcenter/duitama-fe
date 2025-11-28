@@ -1,5 +1,9 @@
 <template>
   <div class="p-8 min-h-screen">
+    <button class="btn btn-ghost btn-sm mb-4" @click="$router.go(-1)">
+      &larr; Kembali ke Daftar Kelompok
+    </button>
+
     <h1 class="text-3xl font-bold mb-6">
       Detail Kelompok: {{ group.group_name || 'Memuat...' }}
     </h1>
@@ -13,7 +17,7 @@
     <!-- Error State -->
     <div v-else-if="error" class="alert alert-error shadow-lg">
       <div>
-        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         <span>Gagal memuat data kelompok: {{ error }}</span>
       </div>
     </div>
@@ -32,7 +36,6 @@
             <span class="font-medium text-gray-500">Deskripsi:</span>
             <p class="text-lg">{{ group.description || 'Tidak ada deskripsi.' }}</p>
           </div>
-          <!-- Anda bisa menambahkan informasi lain di sini -->
         </div>
       </div>
 
@@ -40,8 +43,8 @@
       <div class="card bg-base-100 shadow-xl p-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-semibold">Daftar Anggota ({{ members.length }})</h2>
-          <!-- Tombol Tambah Anggota (contoh) -->
-          <button class="btn btn-primary btn-sm">
+          
+          <button class="btn btn-primary btn-sm" @click="openModal">
             Tambah Anggota
           </button>
         </div>
@@ -53,14 +56,19 @@
                 <th>No.</th>
                 <th>Nama Anggota</th>
                 <th>ID Payer/Member</th>
-                <!-- Tambahkan kolom lain yang relevan -->
+                <th>Aksi</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(member, index) in members" :key="member.id">
                 <th>{{ index + 1 }}</th>
-                <td>{{ member.member_name }}</td>
-                <td>{{ member.member_id }}</td>
+                <td>{{ member.payer_name }}</td>
+                <td>{{ member.identity_number }}</td>
+                <td>
+                  <button class="btn btn-xs btn-error btn-outline" @click="confirmRemove(member.id, member.payer_name)">
+                    Keluarkan
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -70,6 +78,15 @@
         </div>
       </div>
     </div>
+    
+    <!-- Modal Tambah Anggota -->
+    <ModalAddMember
+      v-if="modalVisible"
+      :visible="modalVisible"
+      :group-id="groupId"
+      @add-members="addMembers"
+      @close="closeModal"
+    />
   </div>
 </template>
 
@@ -78,6 +95,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import { api } from '../../api/config';
+import ModalAddMember from '../../components/payer/ModalAddMember.vue'; // Asumsi path
 
 const route = useRoute();
 const groupId = route.params.id;
@@ -86,28 +104,25 @@ const group = ref({});
 const members = ref([]);
 const loading = ref(true);
 const error = ref(null);
-
-// Placeholder untuk struktur data member
-// Sesuaikan dengan respon API Anda yang sebenarnya
-// Struktur member diasumsikan: { id: 1, member_name: 'Nama Anggota', member_id: 'PAY001' }
+const modalVisible = ref(false);
 
 const loadGroupDetails = async () => {
   loading.value = true;
   error.value = null;
   
   try {
-    // 1. Ambil Detail Kelompok
+    // 1. Ambil Detail Kelompok (Endpoint lama tetap digunakan untuk mendapatkan metadata kelompok)
     const groupRes = await api.get(`payer-groups/${groupId}`);
     group.value = groupRes.data.data || groupRes.data;
 
-    // 2. Ambil Daftar Anggota
-    // Asumsi endpoint untuk anggota adalah /payer-groups/{id}/members
-    const membersRes = await api.get(`payer-groups/${groupId}/members`);
-    members.value = membersRes.data.data || membersRes.data;
+    // 2. Ambil Daftar Anggota dari endpoint spesifik yang baru
+    const membersRes = await api.get(`payers/get-by-group-id/${groupId}`);
+    // Asumsi: Endpoint ini mengembalikan array data payer
+    members.value = membersRes.data.data || membersRes.data || []; 
 
   } catch (err) {
     console.error("Error loading group details:", err);
-    error.value = "Terjadi kesalahan saat mengambil data.";
+    error.value = "Terjadi kesalahan saat mengambil data kelompok atau anggota.";
     Swal.fire("Error", "Gagal memuat detail kelompok dan anggota.", "error");
   } finally {
     loading.value = false;
@@ -122,4 +137,79 @@ onMounted(() => {
     loading.value = false;
   }
 });
+
+const openModal = () => {
+  modalVisible.value = true;
+};
+
+const closeModal = () => {
+  modalVisible.value = false;
+};
+
+// === FUNGSI TAMBAH ANGGOTA ===
+// Menerima array objek LENGKAP dari modal (sesuai kebutuhan bulk-update)
+const addMembers = async (payersToUpdate) => {
+  if (payersToUpdate.length === 0) return;
+  
+  closeModal(); // Tutup modal saat proses dimulai
+
+  try {
+    const payload = {
+      payers: payersToUpdate, 
+    };
+    
+    // Panggil endpoint bulk update
+    await api.post('payers/bulk-update', payload);
+
+    Swal.fire("Berhasil", `${payersToUpdate.length} anggota berhasil ditambahkan ke kelompok.`, "success");
+    loadGroupDetails(); // Muat ulang data anggota
+
+  } catch (err) {
+    console.error("Error adding members:", err);
+    Swal.fire("Error", "Gagal menambahkan anggota ke kelompok.", "error");
+  }
+};
+
+// === FUNGSI KELUARKAN ANGGOTA ===
+const removeMember = async (payerId) => {
+   try {
+    // Membuat payload minimal untuk mengeluarkan 1 anggota (dengan data lengkap jika diperlukan)
+    // Untuk saat ini, kita hanya mengirim ID dan payer_group_id: null, seperti yang sudah berfungsi sebelumnya
+    const payersToUpdate = [{
+      id: payerId,
+      payer_group_id: null, // Set payer_group_id ke null untuk mengeluarkan
+      // Catatan: Jika backend memerlukan data lengkap untuk penghapusan, 
+      // Anda perlu mengambil data payer lengkap di sini.
+    }];
+
+    const payload = {
+      payers: payersToUpdate,
+    };
+    
+    // Panggil endpoint bulk update
+    await api.post('payers/bulk-update', payload);
+
+    Swal.fire("Berhasil", "Anggota berhasil dikeluarkan dari kelompok.", "success");
+    loadGroupDetails(); // Muat ulang data anggota
+
+  } catch (err) {
+    console.error("Error removing member:", err);
+    Swal.fire("Error", "Gagal mengeluarkan anggota.", "error");
+  }
+};
+
+const confirmRemove = (payerId, payerName) => {
+  Swal.fire({
+    title: `Keluarkan ${payerName}?`,
+    text: "Anggota ini akan dihapus dari kelompok.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Ya, Keluarkan",
+    cancelButtonText: "Batal",
+  }).then((result) => {
+    if (result.isConfirmed) {
+      removeMember(payerId);
+    }
+  });
+};
 </script>

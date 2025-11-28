@@ -29,7 +29,7 @@
         </div>
         
         <div v-else-if="fetchedData.length > 0">
-          <h4 class="font-semibold mb-3">Hasil Ditemukan: {{ fetchedData.length }} Data</h4>
+          <h4 class="font-semibold mb-3">Hasil Ditemukan: {{ fetchedData.length }} Data (Belum Diimpor)</h4>
           <table class="table w-full table-compact table-zebra">
             <thead>
               <tr>
@@ -51,7 +51,8 @@
                 <!-- Menampilkan register_number (bisa null) -->
                 <td>{{ data.register_number || 'N/A' }}</td>
                 <td class="font-medium">{{ data.nama }}</td>
-                <td>{{ data.prodi_kode || '-' }}</td>
+                <!-- PERBAIKAN: Menampilkan nama_prodi -->
+                <td>{{ data.nama_prodi || '-' }}</td>
                 <td>{{ data.email_pmb || '-' }}</td>
                 <td>{{ data.phone_number || '-' }}</td>
               </tr>
@@ -81,7 +82,6 @@
 <script setup>
 import { ref, computed } from 'vue';
 import Swal from 'sweetalert2';
-// Mengimpor instance 'api' (untuk menyimpan ke DB lokal) dan 'pmb' (untuk fetch data PMB)
 import { api } from '../../api/config'; 
 import { pmb } from '../../api/pmb'; 
 
@@ -93,10 +93,12 @@ const emit = defineEmits(['close', 'imported']);
 
 const loading = ref(false);
 const importing = ref(false);
-// searchParam kini memegang nilai Tahun Ajaran
 const searchParam = ref(''); 
 const fetchedData = ref([]);
 const selectedData = ref([]);
+
+// State baru untuk menyimpan ID yang sudah ada di DB lokal
+const existingIdentities = ref(new Set()); 
 
 const allSelected = computed(() => {
     return fetchedData.value.length > 0 && selectedData.value.length === fetchedData.value.length;
@@ -110,7 +112,6 @@ const toggleSelectAll = () => {
     }
 };
 
-// Fungsi kustom untuk mencegah encoding karakter '/'
 const customParamsSerializer = (params) => {
     const searchParams = new URLSearchParams();
     for (const key in params) {
@@ -118,8 +119,22 @@ const customParamsSerializer = (params) => {
             searchParams.append(key, params[key]);
         }
     }
-    // Mengganti semua encoded forward slash (%2F) kembali ke slash (/)
     return searchParams.toString().replace(/%2F/g, '/');
+};
+
+// === LOAD EXISTING IDENTITIES ===
+const loadExistingIdentities = async () => {
+    try {
+        // Asumsi: Kita memuat semua data payer dan mengambil identity_number
+        const res = await api.get("payers");
+        const existingIds = (res.data.data || res.data || [])
+                            .map(p => String(p.identity_number))
+                            .filter(id => id !== 'null'); // Filter ID null
+        existingIdentities.value = new Set(existingIds);
+    } catch (err) {
+        console.error("Gagal memuat ID Payer lokal:", err);
+        Swal.fire('Error', 'Gagal memuat daftar ID payer yang sudah ada. Filtering mungkin tidak akurat.', 'error');
+    }
 };
 
 
@@ -135,43 +150,60 @@ const fetchDataPMB = async () => {
     selectedData.value = [];
 
     try {
-        // Menerapkan paramsSerializer kustom
+        // 1. Muat ID Payer yang sudah ada
+        await loadExistingIdentities();
+        
+        // 2. Muat data dari PMB
         const res = await pmb.get(`get-verified-maba`, {
             params: {
                 tahunAjaran: searchParam.value
             },
-            paramsSerializer: customParamsSerializer // Menerapkan custom serializer di sini
+            paramsSerializer: customParamsSerializer 
         });
 
-        // ASUMSI: Respons API PMB mengembalikan array data langsung
         const rawData = res.data.data || res.data; 
         
-        // Fungsi helper untuk memetakan data tunggal
-        const mapData = (d, index) => {
-            // Logika baru: Jika register_number null, buat ID sementara unik
-            const tempId = `PMB-TEMP-${Date.now().toString().slice(-6)}-${index + 1}`;
-            const identity = d.register_number || tempId;
+        const mapData = (d) => {
+            // Priority: register_number > d.id > null
+            const identity = d.register_number || d.id || null; 
 
             return {
-                register_number: d.register_number, 
+                register_number: d.register_number || d.id, 
                 nama: d.nama_lengkap || 'Tidak Ada Nama',
                 email_pmb: d.email || '',
                 prodi_kode: d.kode_prodi || '', 
+                nama_prodi: d.nama_prodi || '', 
                 phone_number: d.tlp || '',
                 
                 // Data untuk DB Payer lokal
-                identity_number: identity, // Pastikan selalu string unik atau register_number
-                payer_type: 'calon_mahasiswa', 
+                identity_number: identity, // Bisa null
+                payer_type: 'mahasiswa', 
             };
         };
 
 
         if (Array.isArray(rawData)) {
-            // Menerapkan mapping, mengirim index ke mapData untuk membantu membuat ID unik sementara
-            fetchedData.value = rawData.map(mapData);
+            // 3. Mapping data PMB
+            let mappedData = rawData.map(mapData);
             
-            if (fetchedData.value.length === 0) {
-                 Swal.fire('Informasi', 'Tidak ada calon mahasiswa terverifikasi ditemukan untuk Tahun Ajaran ini.', 'info');
+            // 4. FILTERING: Hapus data yang identity_number-nya sudah ada di existingIdentities
+            const filteredData = mappedData.filter(d => {
+                // Konversi ke string karena Set menyimpan string dari DB lokal
+                const idString = String(d.identity_number); 
+
+                // Jika ID adalah null, kita tidak bisa mengecek keberadaannya, biarkan lolos.
+                if (d.identity_number === null) {
+                    return true;
+                }
+                
+                // Jika ID sudah ada di Set, return false (sembunyikan)
+                return !existingIdentities.value.has(idString);
+            });
+            
+            fetchedData.value = filteredData;
+            
+            if (filteredData.length === 0) {
+                 Swal.fire('Informasi', 'Tidak ada calon mahasiswa baru yang belum diimpor ditemukan untuk Tahun Ajaran ini.', 'info');
             }
             
         } else {
@@ -186,92 +218,98 @@ const fetchDataPMB = async () => {
     }
 };
 
-// === IMPORT DATA KE DB LOKAL ===
+// === IMPORT DATA KE DB LOKAL (BULK INSERT) ===
 const importSelectedData = async () => {
     if (selectedData.value.length === 0) return;
     
     importing.value = true;
-    let successCount = 0;
-    let failCount = 0;
-    let failedMessages = []; // Menyimpan pesan kegagalan
-    let successMessages = []; // Menyimpan pesan keberhasilan
 
+    // 1. Memetakan data terpilih ke format bulk insert payload
+    const payersToInsert = selectedData.value.map(data => ({
+        payer_group_id: null, 
+        // Pastikan identity_number adalah string (jika tidak null)
+        identity_number: data.identity_number !== null ? String(data.identity_number) : null,
+        npm: null,
+        payer_name: data.nama,
+        study_program_code: data.prodi_kode, 
+        email: data.email_pmb,
+        payer_type: data.payer_type, 
+        phone_number: data.phone_number,
+    }));
     
-    const importPromises = selectedData.value.map(async (data) => {
-        const payerPayload = {
-            payer_group_id: null, 
-            identity_number: data.identity_number, 
-            npm: null, 
-            payer_name: data.nama,
-            study_program_code: data.prodi_kode,
-            email: data.email_pmb,
-            payer_type: data.payer_type, 
-            phone_number: data.phone_number,
-        };
+    // 2. Membuat payload akhir
+    const payload = {
+        payers: payersToInsert
+    };
 
-        try {
-            const response = await api.post("payers", payerPayload);
-            successCount++;
-            // Ambil pesan sukses dari respons, jika ada (misal dari response.data.message)
-            const successMessage = response.data?.message || 'Berhasil disimpan.';
-            successMessages.push(`${data.nama}: ${successMessage}`);
-        } catch (err) {
-            failCount++;
-            // Tangkap pesan error dari respons API
-            const errorMessage = err.response?.data?.message || err.message || "Kesalahan tak terduga";
-            failedMessages.push(`${data.nama} (ID: ${data.identity_number || 'N/A'}): ${errorMessage}`);
-            console.error(`Gagal mengimpor ${data.nama}:`, err);
+    try {
+        // 3. Mengirim payload ke endpoint bulk insert
+        const res = await api.post("bulk-insert-payers", payload);
+
+        // --- Memproses respons API sesuai skema baru ---
+        const responseData = res.data;
+        const summary = responseData.summary || { success_count: 0, failed_count: 0 };
+        const successCount = summary.success_count;
+        const failCount = summary.failed_count;
+        const failedDetails = responseData.failed_data || [];
+        
+        let failureHtml = '';
+        
+        if (failCount > 0 && failedDetails.length > 0) {
+            // Membangun daftar pesan kegagalan dari failed_data
+            const detailedMessages = failedDetails.map(detail => {
+                const name = detail.payer_name || 'Data tanpa nama';
+                // Menggabungkan semua error_messages menjadi satu string atau daftar
+                const reasons = (detail.error_messages || []).join('; ');
+                return `<li>• ${name}: ${reasons || 'Alasan tidak diketahui'}</li>`;
+            }).join('');
+
+            failureHtml = `
+                <p class="mt-4 text-left font-medium">Detail Kegagalan:</p>
+                <div class="max-h-32 overflow-y-auto p-2 bg-red-100 rounded text-sm text-red-700 text-left">
+                    <ul>
+                        ${detailedMessages}
+                    </ul>
+                </div>
+            `;
+        } else if (failCount > 0) {
+             // Fallback jika hanya ada hitungan gagal tapi tanpa detail
+             failureHtml = `
+                <p class="mt-4 text-left font-medium">Detail Kegagalan:</p>
+                <div class="p-2 bg-red-100 rounded text-sm text-red-700 text-left">
+                    Gagal menyimpan ${failCount} data. Detail kegagalan tidak disediakan oleh API.
+                </div>
+            `;
         }
-    });
 
-    await Promise.all(importPromises);
-    importing.value = false;
+        Swal.fire({
+            icon: failCount === 0 ? 'success' : 'warning',
+            title: 'Impor Selesai!',
+            html: `Berhasil mengimpor <b>${successCount}</b> data.<br>Gagal: <b>${failCount}</b> data. ${failureHtml}`,
+            confirmButtonText: 'OK',
+            width: failCount > 0 ? 600 : 400
+        });
 
-    // --- Pembuatan pesan hasil ---
+    } catch (err) {
+        console.error("Error during bulk import:", err);
+        // Tangani kegagalan API secara keseluruhan
+        const errorMessage = err.response?.data?.message || err.message || "Kesalahan tak terduga pada server saat bulk insert.";
 
-    // 1. Pesan Keberhasilan (optional)
-    // Biasanya dihilangkan untuk ringkasan, kecuali API memberikan pesan yang sangat spesifik
-    /*
-    let successHtml = '';
-    if (successCount > 0) {
-        successHtml = `
-            <p class="mt-4 text-left font-medium text-green-700">Detail Keberhasilan:</p>
-            <div class="max-h-24 overflow-y-auto p-2 bg-green-100 rounded text-sm text-left">
-                <ul>
-                    ${successMessages.map(msg => `<li>• ${msg}</li>`).join('')}
-                </ul>
-            </div>
-        `;
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal Total Impor!',
+            html: `Tidak dapat melakukan bulk insert.<br>Detail: <b>${errorMessage}</b>`,
+            confirmButtonText: 'OK'
+        });
+        
+    } finally {
+        importing.value = false;
+        // Reset dan tutup modal (terlepas dari hasil sukses/gagal)
+        searchParam.value = '';
+        fetchedData.value = [];
+        selectedData.value = [];
+        emit('imported'); 
+        emit('close');
     }
-    */
-    
-    // 2. Pesan Kegagalan (MANDATORY)
-    let failureHtml = '';
-    if (failCount > 0) {
-        failureHtml = `
-            <p class="mt-4 text-left font-medium">Detail Kegagalan:</p>
-            <div class="max-h-32 overflow-y-auto p-2 bg-red-100 rounded text-sm text-red-700 text-left">
-                <ul>
-                    ${failedMessages.map(msg => `<li>• ${msg}</li>`).join('')}
-                </ul>
-            </div>
-        `;
-    }
-
-    Swal.fire({
-        icon: failCount === 0 ? 'success' : 'warning',
-        title: 'Impor Selesai!',
-        // Tampilkan ringkasan dan detail kegagalan
-        html: `Berhasil mengimpor <b>${successCount}</b> data.<br>Gagal: <b>${failCount}</b> data. ${failureHtml}`,
-        confirmButtonText: 'OK',
-        width: failCount > 0 ? 600 : 400
-    });
-
-    // Reset dan tutup modal
-    searchParam.value = '';
-    fetchedData.value = [];
-    selectedData.value = [];
-    emit('imported'); 
-    emit('close');
 };
 </script>
