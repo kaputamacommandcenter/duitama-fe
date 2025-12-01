@@ -177,9 +177,7 @@ const removeMember = async (payerId) => {
     // Untuk saat ini, kita hanya mengirim ID dan payer_group_id: null, seperti yang sudah berfungsi sebelumnya
     const payersToUpdate = [{
       id: payerId,
-      payer_group_id: null, // Set payer_group_id ke null untuk mengeluarkan
-      // Catatan: Jika backend memerlukan data lengkap untuk penghapusan, 
-      // Anda perlu mengambil data payer lengkap di sini.
+      payer_group_id: null,
     }];
 
     const payload = {

@@ -1,14 +1,12 @@
 <template>
-  <div class="p-8 min-h-screen">
+  <div class="p-2 min-h-screen">
     <h1 class="text-2xl font-semibold mb-6">Kelola Template Pembayaran</h1>
 
     <div class="card bg-base-100 shadow-xl p-6">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-medium">Daftar Template</h2>
-        <button class="btn btn-primary btn-sm" @click="openForm('add')">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
-          </svg>
+      <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
+        <h2 class="text-xl font-medium mb-3 md:mb-0">Daftar Template</h2> 
+        <button class="btn btn-primary btn-sm w-full md:w-auto" @click="openForm('add')">
+          <i class="fa fa-plus"></i>
           Tambah Template
         </button>
       </div>
@@ -27,7 +25,7 @@
             <tr v-for="t in templates" :key="t.id">
               <td>{{ t.name }}</td>
               <td>{{ t.description }}</td>
-              <td>{{ templateDetails[t.id]?.length || 0 }}</td>
+              <td>{{ templateDetails[t.id]?.length || 0 }}</td> 
               <td>
                 <button class="btn btn-xs btn-warning btn-outline mr-2" @click="openForm('edit', t)">Edit</button>
                 <button class="btn btn-xs btn-error btn-outline" @click="confirmDelete(t.id)">Hapus</button>
@@ -104,56 +102,60 @@
     </div>
   </div>
 </template>
+
 <script setup>
 import Swal from "sweetalert2";
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue"; 
+import { api } from '../api/config'; 
 
-// =================== STATE DUMMY DATA =====================
-const templates = ref([
-  { id: 1, name: "S1 Pagi - TA. 2025/2026", description: "Cicilan I + MOMB + Seragam" }, 
-  { id: 2, name: "S1 Pagi - TA. 2025/2026", description: "Biaya Kuliah + Pengembangan Lengkap" }
-]);
+// =================== STATE MANAGEMENT =====================
+const templates = ref([]); 
+const templateDetails = ref({}); 
 
-const templateDetails = ref({
-  // TEMPLATE 1: DAFTAR ULANG (S1 PAGI) 
-  1: [
-    { id: 1, billing_item_id: 1, billing_item_name: "Biaya Kuliah - Cicilan I", amount: 800000, due_date: "2025-09-20" }, 
-    { id: 2, billing_item_id: 2, billing_item_name: "Biaya Pengembangan - Cicilan I", amount: 200000, due_date: "2025-09-20" }, 
-    { id: 3, billing_item_id: 3, billing_item_name: "Biaya MOMB", amount: 300000, due_date: "2025-09-20" }, 
-    { id: 4, billing_item_id: 4, billing_item_name: "Biaya Seragam (2 Buah)", amount: 350000, due_date: "2025-09-20" }, 
-  ],
-  
-  // TEMPLATE 2: CICILAN LENGKAP 5 Cicilan (S1 PAGI)
-  2: [
+const formatRupiah = (value) => new Intl.NumberFormat("id-ID").format(value);
+
+// =================== LOGIKA FETCH DATA =====================
+
+const fetchTemplates = async () => {
+  try {
+    const response = await api.get('/payment-templates');
+    const receivedTemplates = response.data.data; 
+
+    const newTemplateDetails = {};
+    const newTemplatesList = [];
+
+    receivedTemplates.forEach(t => {
+      newTemplateDetails[t.id] = t.details.map(detail => ({
+        id: detail.id,
+        billing_item_name: detail.name, 
+        amount: detail.amount,
+        due_date: detail.due_date || '', 
+      }));
+
+      newTemplatesList.push({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+      });
+    });
     
-    // Cicilan II
-    { id: 12, billing_item_id: 12, billing_item_name: "Biaya Kuliah - Cicilan II", amount: 1000000, due_date: "2025-11-15" },
-    { id: 13, billing_item_id: 13, billing_item_name: "Biaya Pengembangan - Cicilan II", amount: 150000, due_date: "2025-11-15" },
-    
-    // Cicilan III
-    { id: 14, billing_item_id: 14, billing_item_name: "Biaya Kuliah - Cicilan III", amount: 1000000, due_date: "2025-12-15" },
-    { id: 15, billing_item_id: 15, billing_item_name: "Biaya Pengembangan - Cicilan III", amount: 150000, due_date: "2025-12-15" },
+    templates.value = newTemplatesList;
+    templateDetails.value = newTemplateDetails;
 
-    // Cicilan IV
-    { id: 16, billing_item_id: 16, billing_item_name: "Biaya Kuliah - Cicilan IV", amount: 900000, due_date: "2026-01-15" },
-    { id: 17, billing_item_id: 17, billing_item_name: "Biaya Pengembangan - Cicilan IV", amount: 150000, due_date: "2026-01-15" },
+  } catch (error) {
+    console.error("Gagal memuat template pembayaran:", error);
+    Swal.fire('Error', 'Gagal memuat data template dari server.', 'error');
+  }
+};
 
-    // Cicilan V
-    { id: 18, billing_item_id: 18, billing_item_name: "Biaya Kuliah - Cicilan V", amount: 1000000, due_date: "2026-02-15" },
-    { id: 19, billing_item_id: 19, billing_item_name: "Biaya Pengembangan - Cicilan V", amount: 150000, due_date: "2026-02-15" },
-
-    // Cicilan VI
-    { id: 20, billing_item_id: 20, billing_item_name: "Biaya Kuliah - Cicilan VI", amount: 1000000, due_date: "2026-03-15" },
-    { id: 21, billing_item_id: 21, billing_item_name: "Biaya Pengembangan - Cicilan VI", amount: 200000, due_date: "2026-03-15" },
-  ]
+onMounted(() => {
+  fetchTemplates();
 });
 
-// Helper untuk format Rupiah
-const formatRupiah = (value) => new Intl.NumberFormat("id-ID").format(value);
 
 // =================== STATE MANAGEMENT FORM =====================
 const modalVisible = ref(false);
-const formMode = ref('add'); // 'add' atau 'edit'
+const formMode = ref('add'); 
 
 const currentTemplate = ref({ id: null, name: '', description: '' });
 const currentTemplateDetails = ref([]);
@@ -185,7 +187,6 @@ const closeModal = () => {
 const addItem = () => {
   currentTemplateDetails.value.push({
     id: tempIdCounter--, 
-    billing_item_id: tempIdCounter, 
     billing_item_name: '',
     amount: 0,
     due_date: "", 
@@ -204,7 +205,6 @@ const isFormValid = computed(() => {
   if (currentTemplateDetails.value.length === 0) {
     return false;
   }
-  // Pastikan semua detail item terisi valid
   return currentTemplateDetails.value.every(item => 
     item.billing_item_name && item.billing_item_name.trim() !== '' &&
     item.amount > 0 && 
@@ -212,42 +212,41 @@ const isFormValid = computed(() => {
   );
 });
 
-const saveTemplate = () => {
+// =================== LOGIKA SIMPAN & HAPUS API =====================
+
+const saveTemplate = async () => {
   if (!isFormValid.value) {
     Swal.fire('Validasi Gagal', 'Harap lengkapi Nama Template, Nominal, dan semua Tanggal Jatuh Tempo dengan benar.', 'warning');
     return;
   }
-  
-  // 1. Logika Simpan Template (Header)
-  if (formMode.value === 'add') {
-    const newId = templates.value.length ? Math.max(...templates.value.map(t => t.id)) + 1 : 1;
-    currentTemplate.value.id = newId;
-    templates.value.push({ ...currentTemplate.value });
-  } else {
-    const index = templates.value.findIndex(t => t.id === currentTemplate.value.id);
-    if (index !== -1) {
-      templates.value[index] = { ...currentTemplate.value };
+
+  const templatePayload = {
+    name: currentTemplate.value.name,
+    description: currentTemplate.value.description,
+    details: currentTemplateDetails.value.map(item => ({
+      name: item.billing_item_name, 
+      amount: item.amount,
+      due_date: item.due_date, 
+      ...(item.id > 0 && { id: item.id }) 
+    }))
+  };
+
+  try {
+    if (formMode.value === 'add') {
+      await api.post('/payment-templates', templatePayload);
+      Swal.fire('Berhasil!', `Template ${currentTemplate.value.name} berhasil ditambahkan.`, 'success');
+    } else {
+      await api.put(`/payment-templates/${currentTemplate.value.id}`, templatePayload);
+      Swal.fire('Berhasil!', `Template ${currentTemplate.value.name} berhasil diperbarui.`, 'success');
     }
+
+    closeModal();
+    await fetchTemplates(); 
+
+  } catch (error) {
+    console.error("Gagal menyimpan template:", error);
+    Swal.fire('Error', `Gagal menyimpan template. ${error.response?.data?.message || error.message}`, 'error');
   }
-
-  // 2. Logika Simpan Detail Template
-  const templateId = currentTemplate.value.id;
-  
-  const finalDetails = currentTemplateDetails.value.map(item => {
-    if (item.id < 0) {
-      return { 
-        ...item, 
-        id: null, 
-        billing_item_id: null 
-      };
-    }
-    return item;
-  });
-  
-  templateDetails.value[templateId] = finalDetails;
-
-  Swal.fire('Berhasil!', `Template ${currentTemplate.value.name} berhasil disimpan.`, 'success');
-  closeModal();
 };
 
 const confirmDelete = (id) => {
@@ -262,21 +261,23 @@ const confirmDelete = (id) => {
   }).then((result) => {
     if (result.isConfirmed) {
       deleteTemplate(id);
-      Swal.fire(
-        'Terhapus!',
-        'Template berhasil dihapus.',
-        'success'
-      );
     }
   });
 };
 
-const deleteTemplate = (id) => {
-  const index = templates.value.findIndex(t => t.id === id);
-  if (index !== -1) {
-    templates.value.splice(index, 1);
+const deleteTemplate = async (id) => {
+  try {
+    await api.delete(`/payment-templates/${id}`);
+    await fetchTemplates();
+    
+    Swal.fire(
+      'Terhapus!',
+      'Template berhasil dihapus.',
+      'success'
+    );
+  } catch (error) {
+    console.error("Gagal menghapus template:", error);
+    Swal.fire('Error', `Gagal menghapus template. ${error.response?.data?.message || error.message}`, 'error');
   }
-  delete templateDetails.value[id];
 };
-
 </script>
