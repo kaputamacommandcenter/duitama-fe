@@ -28,7 +28,6 @@
               <td>{{ templateDetails[t.id]?.length || 0 }}</td> 
               <td>
                 <button class="btn btn-xs btn-warning btn-outline mr-2" @click="openForm('edit', t)">Edit</button>
-                <button class="btn btn-xs btn-error btn-outline" @click="confirmDelete(t.id)">Hapus</button>
               </td>
             </tr>
           </tbody>
@@ -194,7 +193,25 @@ const addItem = () => {
 };
 
 const removeItem = (index) => {
-  currentTemplateDetails.value.splice(index, 1);
+  Swal.fire({
+    title: 'Hapus Item Ini?',
+    text: "Item tagihan akan dihapus dari template.",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Ya, Hapus'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      currentTemplateDetails.value.splice(index, 1);
+
+      Swal.fire(
+        'Terhapus!',
+        'Item tagihan berhasil dihapus.',
+        'success'
+      );
+    }
+  });
 };
 
 // Validasi Form
