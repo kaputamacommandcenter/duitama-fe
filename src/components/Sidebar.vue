@@ -106,8 +106,16 @@ interface MenuItem {
 
 // Data menu utama
 const menuItems: MenuItem[] = [
-  {id: "beranda",name: "Beranda",icon: "fa-solid fa-house",link: "/dashboard"},  
-  {id: "generate-tagihan",name: "Generate Tagihan",icon: "fa-solid fa-receipt",link: "/dashboard/generate-tagihan"},
+  {id: "beranda",name: "Beranda",icon: "fa-solid fa-house",link: "/dashboard"},
+  {
+    id: "kelola-tagihan",
+    name: "Kelola Tagihan",
+    icon: "fa-solid fa-file-lines",
+    children: [
+      { id: "generate-tagihan", name: "Generate Tagihan", icon: "fa-solid fa-receipt", link: "/dashboard/generate-tagihan" },
+      { id: "data-tagihan", name: "Data Tagihan", icon: "fa-solid fa-receipt", link: "/dashboard/data-tagihan" },
+    ]
+  },
   {
     id: "kelola-pembayaran",
     name: "Kelola Pembayaran",

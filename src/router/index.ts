@@ -60,6 +60,16 @@ const routes = [
         ]
       }
     },
+    {
+      path: 'data-tagihan', name: 'data-tagihan', component: () => import('../pages/DataTagihanPage.vue'),
+      meta: {
+        title: 'DUITAMA | Data Tagihan',
+        breadcrumb: [
+          { name: "Dashboard" },
+          { name: "Data Tagihan" }
+        ]
+      }
+    },
     // Template Pembayaran (Diperbaiki: path: 'template-pembayaran')
     {
       path: 'template-pembayaran', name: 'template-pembayaran', component: () => import('../pages/TemplatePembayaranPage.vue'),
