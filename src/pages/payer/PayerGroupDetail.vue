@@ -3,10 +3,14 @@
     <button class="btn btn-ghost btn-sm mb-4" @click="$router.go(-1)">
       &larr; Kembali ke Daftar Kelompok
     </button>
-
-    <h1 class="text-3xl font-bold mb-6">
-      Detail Kelompok: {{ group.group_name || 'Memuat...' }}
-    </h1>
+    <div class="flex flex-column md:flex-row md:justify-between">
+      <h1 class="text-3xl font-bold mb-6">
+        Detail Kelompok: {{ group.group_name || 'Memuat...' }}
+      </h1>
+      <button class="btn btn-primary btn-sm" @click="openModal">
+        Tambah Anggota
+      </button>
+    </div>
 
     <!-- Loading State -->
     <div v-if="loading" class="text-center p-10">
@@ -17,7 +21,6 @@
     <!-- Error State -->
     <div v-else-if="error" class="alert alert-error shadow-lg">
       <div>
-        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         <span>Gagal memuat data kelompok: {{ error }}</span>
       </div>
     </div>
@@ -43,10 +46,6 @@
       <div class="card bg-base-100 shadow-xl p-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-semibold">Daftar Anggota ({{ members.length }})</h2>
-          
-          <button class="btn btn-primary btn-sm" @click="openModal">
-            Tambah Anggota
-          </button>
         </div>
 
         <div v-if="members.length > 0" class="overflow-x-auto">
