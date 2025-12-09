@@ -1,130 +1,106 @@
 <template>
- <div class="p-8 min-h-screen">
-  <h1 class="text-2xl font-semibold mb-6">Generate Tagihan Mutlak</h1>
+  <div class="p-8 min-h-screen">
+    <h1 class="text-2xl font-semibold mb-6">Generate Tagihan Mutlak</h1>
+    <div class="card bg-base-100 shadow-xl p-6">
+      <div class="mb-4">
+        <label class="font-medium text-sm">Template Pembayaran</label>
+        <select v-model="selectedTemplate" @change="loadTemplateDetails" class="select select-bordered w-full mt-1">
+          <option disabled value="">— pilih template pembayaran —</option>
+          <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
+        </select>
+      </div>
 
-  <div class="card bg-base-100 shadow-xl p-6">
-   
-   <!-- Template Selection -->
-   <div class="mb-4">
-    <label class="font-medium text-sm">Template Pembayaran</label>
-    <select v-model="selectedTemplate" @change="loadTemplateDetails"
-     class="select select-bordered w-full mt-1">
-     <option disabled value="">— pilih template pembayaran —</option>
-     <option v-for="t in templates" :key="t.id" :value="t.id">
-      {{ t.name }}
-     </option>
-    </select>
-   </div>
+      <div v-if="templateDetails.length" class="mb-6">
+        <p class="font-semibold mb-2">Billing Items di Template:</p>
+        <table class="table w-full">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Nominal</th>
+              <th>Jatuh Tempo (Tanggal Mutlak)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in templateDetails" :key="item.id">
+              <td>{{ item.billing_item_name }}</td>
+              <td>Rp {{ formatRupiah(item.amount) }}</td>
+              <td>{{ item.due_date }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-   <!-- Template Details Preview -->
-   <div v-if="templateDetails.length" class="mb-6">
-    <p class="font-semibold mb-2">Billing Items di Template:</p>
-    <table class="table w-full">
-     <thead>
-      <tr>
-       <th>Item</th>
-       <th>Nominal</th>
-       <th>Jatuh Tempo (Tanggal Mutlak)</th>
-      </tr>
-     </thead>
-      <tbody>
-       <tr v-for="item in templateDetails" :key="item.id">
-        <td>{{ item.billing_item_name }}</td>
-        <td>Rp {{ formatRupiah(item.amount) }}</td>
-        <td>{{ item.due_date }}</td>
-       </tr>
-      </tbody>
-    </table>
-   </div>
+      <hr class="my-4" />
 
-   <hr class="my-4" />
+      <PayerSelection 
+        v-model:payerMode="payerMode"
+        v-model:selectedPayers="selectedPayers"
+        v-model:selectedGroups="selectedGroups"
+        v-model:selectAll="selectAll"
+        v-model:searchQuery="searchQuery"
+        :payers="payers"
+        :payerGroups="payerGroups"
+        @openMembersModal="openMembersModal"
+      />
 
-   <!-- Payer Selection Component -->
-   <PayerSelection 
-    v-model:payerMode="payerMode"
-    v-model:selectedPayers="selectedPayers"
-    v-model:selectedGroups="selectedGroups"
-    v-model:selectAll="selectAll"
-    v-model:searchQuery="searchQuery"
-    :payers="payers"
-    :payerGroups="payerGroups"
-    @openMembersModal="openMembersModal"
-   />
-
-   <!-- Action Buttons -->
-   <div class="flex justify-end gap-3">
-    <button @click="resetForm" class="btn btn-neutral btn-outline" :disabled="isProcessing">
-     Reset Form
-    </button>
-    <!-- Tombol Generate (Direct Save) -->
-    <button @click="processAndSaveTagihan" class="btn btn-primary" 
-        :disabled="!selectedTemplate || isProcessing">
-      <span v-if="isProcessing" class="loading loading-spinner"></span>
-      {{ isProcessing ? 'Memproses...' : 'Generate Tagihan' }}
-    </button>
-   </div>
-
+      <div class="flex justify-end gap-3">
+        <button @click="resetForm" class="btn btn-neutral btn-outline" :disabled="isProcessing">Reset Form</button>
+        <button @click="processAndSaveTagihan" class="btn btn-primary" :disabled="!selectedTemplate || isProcessing">
+          <span v-if="isProcessing" class="loading loading-spinner"></span>
+          {{ isProcessing ? 'Memproses...' : 'Generate Tagihan' }}
+        </button>
+      </div>
+    </div>
   </div>
 
-  <!-- Generated Summary Section Component - DIHAPUS -->
-
- </div>
- 
- <!-- MODALS - DIHAPUS -->
-
+  <GroupMembersModal 
+    :isVisible="modalVisible"
+    :activeGroup="activeGroup"
+    @close="modalVisible = false"
+  />
 </template>
+
 <script setup>
 import Swal from "sweetalert2";
-import { api } from '../api/config'; 
-import { ref, watch, onMounted, computed, nextTick } from "vue"; 
+import { api } from '../api/config';
+import { ref, watch, onMounted, computed, nextTick } from "vue";
 
-// Import Components yang tetap digunakan
 import PayerSelection from '../components/bill-generate/PayerSelection.vue';
+import GroupMembersModal from '../components/bill-generate/GroupMembersModal.vue';
 
-// =================== STATE MANAGEMENT =====================
-const modalVisible = ref(false); // Dipertahankan untuk GroupMembersModal
-const activeGroup = ref(null); // Dipertahankan untuk GroupMembersModal
+const modalVisible = ref(false);
+const activeGroup = ref(null);
 
-const generatedResults = ref([]); 
-const generatedSummary = ref([]); 
+const generatedResults = ref([]);
+const generatedSummary = ref([]);
 
-const payerMode = ref(""); 
+const payerMode = ref("");
 const selectedPayers = ref([]);
 const selectedGroups = ref([]);
-const selectAll = ref(false); 
-const searchQuery = ref(''); 
+const selectAll = ref(false);
+const searchQuery = ref('');
 
-const selectedTemplate = ref(""); 
+const selectedTemplate = ref("");
 const templateDetails = ref([]);
 
-const isProcessing = ref(false); 
+const isProcessing = ref(false);
 
-
-// ======================= DATA FETCHING / API CALLS =========================
-
-const templates = ref([]); 
+const templates = ref([]);
 const payers = ref([]);
 const payerGroups = ref([]);
+const availableDiscounts = ref([]);
 
-// Data Potongan sekarang di-fetch, TAPI TIDAK DIPAKAI untuk logika diskon di frontend lagi.
-// Diskon harus diterapkan di backend (setelah dikirim ke API).
-const availableDiscounts = ref([]); 
-
-/**
- * Mengambil data Potongan Harga dari /discounts.
- */
 const fetchDiscounts = async () => {
     isProcessing.value = true;
     try {
         const response = await api.get('/discounts');
         availableDiscounts.value = (response.data.data || []).map(d => ({
             id: d.id,
-            name: d.description, 
+            name: d.description,
             type: d.type,
             value: d.value,
-            is_active: d.is_active 
-        })).filter(d => d.is_active); 
-        
+            is_active: d.is_active
+        })).filter(d => d.is_active);
     } catch (error) {
         console.error("Gagal mengambil data Potongan Diskon:", error);
         Swal.fire("Error", "Gagal mengambil data Potongan Diskon dari server.", "error");
@@ -133,11 +109,8 @@ const fetchDiscounts = async () => {
     }
 };
 
-/**
- * Mengambil data Payer Individu dari /payers.
- */
 const fetchIndividualPayers = async () => {
-    if (payers.value.length > 0) return; 
+    if (payers.value.length > 0) return;
     isProcessing.value = true;
     try {
         const payersResponse = await api.get('/payers');
@@ -145,9 +118,8 @@ const fetchIndividualPayers = async () => {
             id: p.id,
             name: p.payer_name,
             identity_number: p.npm || p.identity_number || 'N/A',
-            npm: p.npm || '' 
+            npm: p.npm || ''
         }));
-
     } catch (error) {
         console.error("Gagal mengambil data Payer Individu:", error);
         payers.value = [];
@@ -157,20 +129,16 @@ const fetchIndividualPayers = async () => {
     }
 };
 
-/**
- * Mengambil data Kelompok Payer dari /payer-groups.
- */
 const fetchGroupPayers = async () => {
-    if (payerGroups.value.length > 0) return; 
+    if (payerGroups.value.length > 0) return;
     isProcessing.value = true;
     try {
         const groupsResponse = await api.get('/payer-groups');
         payerGroups.value = (groupsResponse.data.data || []).map(g => ({
             id: g.id,
             name: g.group_name,
-            members: g.members || [] 
+            members: g.members || []
         }));
-
     } catch (error) {
         console.error("Gagal mengambil data Kelompok Payer:", error);
         payerGroups.value = [];
@@ -180,17 +148,14 @@ const fetchGroupPayers = async () => {
     }
 };
 
-/**
- * Mengambil anggota grup spesifik dari /payers/get-by-group-id/{groupId}.
- */
 const fetchGroupMembers = async (groupId) => {
     try {
         const response = await api.get(`/payers/get-by-group-id/${groupId}`);
         const fetchedMembers = (response.data.data || []).map(m => ({
             id: m.id,
-            name: m.payer_name, 
-            identity_number: m.identity_number, 
-            npm: m.npm || '' 
+            name: m.payer_name,
+            identity_number: m.identity_number,
+            npm: m.npm || ''
         }));
         return fetchedMembers;
     } catch (error) {
@@ -200,14 +165,10 @@ const fetchGroupMembers = async (groupId) => {
     }
 };
 
-
-/**
- * Mengambil data template pembayaran dari /payment-templates.
- */
 const fetchTemplates = async () => {
     try {
         isProcessing.value = true;
-        const response = await api.get('/payment-templates'); 
+        const response = await api.get('/payment-templates');
         const fetchedTemplates = response.data.data;
         templates.value = fetchedTemplates.map(t => ({
             id: t.id,
@@ -226,9 +187,6 @@ const fetchTemplates = async () => {
     }
 };
 
-
-// =================== METHODS AND LOGIC =====================
-
 const formatRupiah = (value) => new Intl.NumberFormat("id-ID").format(value);
 
 const openMembersModal = async (group) => {
@@ -242,35 +200,23 @@ const openMembersModal = async (group) => {
     isProcessing.value = false;
 };
 
-// 🚨 PERUBAHAN: Handler utama sekarang langsung memanggil proses save
 const handleGenerateButtonClick = () => {
     processAndSaveTagihan();
-}
-
-// Logika diskon (tidak digunakan lagi, tapi dipertahankan jika ada komponen lain yang memerlukannya)
-// const openDiscountModal = async () => { ... } 
-// const closeDiscountModal = () => { ... } 
-// const applyDiscountToInvoice = (invoice) => { ... } 
-// const clearDiscount = (invoice) => { ... } 
-// const updateSummaryTotal = (payerId) => { ... } 
-// const openSummaryDetailModal = (payerSummary) => { ... } 
-
+};
 
 const loadTemplateDetails = () => {
     if (!selectedTemplate.value) {
         templateDetails.value = [];
         return;
     }
-
     const template = templates.value.find(t => t.id === selectedTemplate.value);
-    
     if (template && template.details) {
         templateDetails.value = template.details.map(detail => ({
             id: detail.id,
-            billing_item_id: detail.id, 
-            billing_item_name: detail.name, 
+            billing_item_id: detail.id,
+            billing_item_name: detail.name,
             amount: detail.amount,
-            due_date: detail.due_date, 
+            due_date: detail.due_date,
         }));
     } else {
         templateDetails.value = [];
@@ -278,71 +224,58 @@ const loadTemplateDetails = () => {
 };
 
 const resetForm = () => {
-    selectedTemplate.value = ""; 
-    payerMode.value = ""; 
+    selectedTemplate.value = "";
+    payerMode.value = "";
     selectedPayers.value = [];
     selectedGroups.value = [];
     selectAll.value = false;
-    searchQuery.value = ''; 
-    
-    // Clear processing data
+    searchQuery.value = '';
     generatedResults.value = [];
-    generatedSummary.value = []; 
+    generatedSummary.value = [];
     loadTemplateDetails();
-}
+};
 
-/**
- * Fungsi ini digunakan untuk membuat payload data yang siap dikirim.
- * Menggabungkan validasi dan model data.
- * @returns {object} { success, message, payload }
- */
 const createBulkPayload = () => {
-    // --- Validasi Dasar ---
-    if (!selectedTemplate.value) { 
+    if (!selectedTemplate.value) {
         return { success: false, message: "Harap pilih Template", payload: null };
     }
     if (!payerMode.value) {
         return { success: false, message: "Harap pilih Mode Payer", payload: null };
     }
-    
-    const finalPayerMap = new Map(); 
-    
-    // 1. Kumpulkan Payer berdasarkan Mode
+
+    const finalPayerMap = new Map();
+
     if (payerMode.value === "individual") {
         if (selectedPayers.value.length === 0) {
             return { success: false, message: "Pilih minimal 1 Payer Individu", payload: null };
         }
         payers.value
-          .filter((p) => selectedPayers.value.includes(p.id))
-          .forEach((p) => finalPayerMap.set(p.id, p));
-
+            .filter(p => selectedPayers.value.includes(p.id))
+            .forEach(p => finalPayerMap.set(p.id, p));
     } else if (payerMode.value === "group") {
         if (selectedGroups.value.length === 0) {
             return { success: false, message: "Pilih minimal 1 Kelompok Payer", payload: null };
         }
         payerGroups.value
-          .filter((g) => selectedGroups.value.includes(g.id))
-          .flatMap((g) => g.members)
-          .forEach((p) => finalPayerMap.set(p.id, p)); 
+            .filter(g => selectedGroups.value.includes(g.id))
+            .flatMap(g => g.members)
+            .forEach(p => finalPayerMap.set(p.id, p));
     }
 
     const finalPayers = Array.from(finalPayerMap.values());
 
     if (finalPayers.length === 0) {
-          return { success: false, message: "Tidak ada Payer yang valid untuk digenerate", payload: null };
+        return { success: false, message: "Tidak ada Payer yang valid untuk digenerate", payload: null };
     }
 
-    // 2. Generate Invoice / Payload Item
     const bulkPayloadArray = [];
 
-    finalPayers.forEach(payer => { 
+    finalPayers.forEach(payer => {
         templateDetails.value.forEach(item => {
-            // Karena diskon manual dihapus, kita asumsikan tidak ada diskon (null)
-            // Diskon harus diurus di backend berdasarkan rules
             bulkPayloadArray.push({
                 payer_id: payer.id,
-                payment_template_detail_id: item.id, 
-                discount_id: null, // Asumsi: Diskon manual ditiadakan, kirim null
+                payment_template_detail_id: item.id,
+                discount_id: null,
             });
         });
     });
@@ -354,15 +287,11 @@ const createBulkPayload = () => {
     return { success: true, message: "Payload siap", payload: finalBulkPayload };
 };
 
-/**
- * Memproses ringkasan tagihan dan mengirimkannya ke API untuk disimpan secara BULK.
- */
 const processAndSaveTagihan = async () => {
     isProcessing.value = true;
-    
-    // 1. Buat Payload dan Validasi
+
     const { success, message, payload } = createBulkPayload();
-    
+
     if (!success) {
         Swal.fire("Gagal", message, "warning");
         isProcessing.value = false;
@@ -370,8 +299,7 @@ const processAndSaveTagihan = async () => {
     }
 
     const bulkPayloadArray = payload.plans;
-    
-    // 2. Konfirmasi sebelum menyimpan ke API
+
     const confirmation = await Swal.fire({
         title: 'Konfirmasi Generate Tagihan',
         text: `Anda akan menyimpan ${bulkPayloadArray.length} tagihan ke sistem. Lanjutkan?`,
@@ -386,7 +314,6 @@ const processAndSaveTagihan = async () => {
         return;
     }
 
-    // 3. API POST
     try {
         const response = await api.post('/bulk-insert-payment-plans', payload);
 
@@ -394,8 +321,8 @@ const processAndSaveTagihan = async () => {
 
         if (response.data.success) {
             Swal.fire(
-                "Berhasil!", 
-                `${bulkPayloadArray.length} Payment Plan berhasil disimpan ke sistem.`, 
+                "Berhasil!",
+                `${bulkPayloadArray.length} Payment Plan berhasil disimpan ke sistem.`,
                 "success"
             );
             resetForm();
@@ -422,18 +349,49 @@ const getTemplateName = (templateId) => {
     return template ? template.name : 'Template Tidak Dikenal';
 };
 
+const loadMembersForSelectedGroups = async (groupIDs) => {
+    if (payerMode.value !== 'group') return;
 
-// =================== LIFECYCLE HOOKS & WATCHERS =====================
+    isProcessing.value = true;
+    try {
+        const fetchPromises = groupIDs.map(async (groupId) => {
+            const existingGroup = payerGroups.value.find(g => g.id === groupId);
+            if (existingGroup && existingGroup.members && existingGroup.members.length > 0) {
+                return null;
+            }
+            const members = await fetchGroupMembers(groupId);
+            return { groupId, members };
+        });
+
+        const results = await Promise.all(fetchPromises);
+        results.filter(r => r !== null).forEach(({ groupId, members }) => {
+            payerGroups.value = payerGroups.value.map(g => {
+                if (g.id === groupId) {
+                    return { ...g, members: members };
+                }
+                return g;
+            });
+        });
+
+    } catch (error) {
+        console.error("Gagal memuat anggota untuk grup yang dipilih:", error);
+    } finally {
+        isProcessing.value = false;
+    }
+};
 
 onMounted(async () => {
-    // Ambil data diskon saat mount
-    await fetchDiscounts(); 
-    await fetchTemplates(); 
-    
+    await fetchDiscounts();
+    await fetchTemplates();
     loadTemplateDetails();
 });
 
-// Watcher untuk memuat data Payer/Group saat Mode Payer dipilih
+watch(selectedGroups, (newGroupIDs) => {
+    if (payerMode.value === 'group' && newGroupIDs.length > 0) {
+        loadMembersForSelectedGroups(newGroupIDs);
+    }
+}, { deep: true });
+
 watch(payerMode, (newMode) => {
     if (newMode === 'individual') {
         fetchIndividualPayers();
