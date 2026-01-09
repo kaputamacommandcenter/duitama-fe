@@ -1,72 +1,121 @@
 <template>
   <input type="checkbox" id="discount_modal" class="modal-toggle" :checked="isVisible" />
   <div class="modal" :class="{'modal-open': isVisible}">
-    <div class="modal-box w-11/12 max-w-4xl">
-      <h3 class="font-bold text-xl mb-4">Terapkan Potongan Manual</h3>
+    <div class="modal-box w-11/12 max-w-4xl border-t-4 border-primary">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="font-bold text-xl">Kelola Potongan Tagihan</h3>
+        <button class="btn btn-sm btn-circle btn-ghost" @click="$emit('close')">✕</button>
+      </div>
 
       <div v-if="modalLoading" class="text-center py-10">
         <span class="loading loading-spinner loading-lg text-primary"></span>
-        <p class="mt-3">Memuat data potongan dan tagihan...</p>
+        <p class="mt-3 text-sm font-medium">Sinkronisasi data...</p>
       </div>
       
       <div v-else-if="!activePayerDetails || activePayerDetails.length === 0">
-        <div class="alert alert-warning">
-          Tidak ada item tagihan untuk diterapkan potongan.
+        <div class="alert alert-warning shadow-sm">
+          <span>Tidak ada rincian tagihan yang tersedia.</span>
         </div>
       </div>
 
       <div v-else>
-        <div class="mb-4 p-3 bg-base-200 rounded-lg">
-          <p class="text-sm">Payer: <span class="font-semibold">{{ activePayerDetails[0].payer.payer_name }}</span></p>
-          <p class="text-sm">ID/NPM: <span class="font-semibold">{{ activePayerDetails[0].payer.identity_number }}</span></p>
-          <p class="text-lg font-bold mt-2">
-            Total Akhir: Rp {{ formatRupiah(totalTagihan) }}
-          </p>
+        <div class="bg-base-200 p-6 rounded-xl mb-6 flex flex-wrap justify-between items-center gap-4">
+          <div>
+            <p class="text-[10px] uppercase tracking-widest font-bold opacity-50">Target Payer</p>
+            <p class="font-bold text-lg text-primary leading-tight">{{ activePayerDetails[0].payer.payer_name }}</p>
+            <p class="text-sm opacity-70">Total Tagihan: <span class="font-bold text-base-content">Rp {{ formatRupiah(totalTagihan) }}</span></p>
+          </div>
+
+          <div class="flex flex-col gap-2 min-w-[320px]">
+            <div class="flex justify-between items-end">
+                <span class="text-[11px] font-bold text-primary">{{ selectedIds.length }} Item Terpilih</span>
+                <button v-if="selectedIds.length > 0" @click="resetAllToOriginal" class="text-[10px] link link-hover text-error font-semibold uppercase">Batal Pilih & Reset</button>
+            </div>
+            
+            <select 
+              class="select select-bordered select-sm w-full focus:outline-none border-gray-300 shadow-sm"
+              @change="handleBulkAction($event)"
+              :disabled="selectedIds.length === 0"
+            >
+              <option value="" selected disabled>-- Pilih Tindakan Massal --</option>
+              <optgroup label="Terapkan / Ubah Potongan">
+                  <option v-for="d in availableDiscounts" :key="d.id" :value="JSON.stringify({type: 'apply', data: d})">
+                      {{ d.name }} ({{ formatDiscountValue(d.value, d.type) }})
+                  </option>
+              </optgroup>
+              <optgroup label="Pembersihan">
+                  <option :value="JSON.stringify({type: 'clear'})">❌ Kosongkan Potongan Terpilih</option>
+              </optgroup>
+            </select>
+            <p class="text-[10px] italic opacity-60 text-right">* Unchecklist item untuk mengembalikan ke data awal</p>
+          </div>
         </div>
 
-        <div class="overflow-x-auto max-h-96 space-y-4">
-          <div v-for="(plan) in activePayerDetails" :key="plan.id" class="p-3 border rounded-lg bg-base-100">
-            <p class="font-semibold text-md mb-2">{{ plan.item.name }}</p>
-            <p class="text-sm text-gray-500 mb-2">Nominal Awal: Rp {{ formatRupiah(plan.item.amount) }}</p>
-            
-            <div class="flex items-center gap-3">
-              <select 
-                :value="plan.discount?.id || ''"
-                @change="applyDiscount(plan, $event.target.value)"
-                class="select select-bordered select-sm w-full"
+        <div class="overflow-hidden border rounded-xl shadow-sm bg-base-100">
+          <table class="table table-zebra w-full">
+            <thead class="bg-base-200/50">
+              <tr>
+                <th class="w-12 text-center">
+                  <input 
+                    type="checkbox" 
+                    class="checkbox checkbox-primary checkbox-sm" 
+                    :checked="isAllSelected" 
+                    @change="toggleSelectAll"
+                  />
+                </th>
+                <th class="text-sm font-bold opacity-70">Item Tagihan</th>
+                <th class="text-right text-sm font-bold opacity-70">Awal</th>
+                <th class="text-center text-sm font-bold opacity-70">Potongan Saat Ini</th>
+                <th class="text-right text-sm font-bold opacity-70">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr 
+                v-for="(plan) in activePayerDetails" 
+                :key="plan.id"
+                class="hover transition-colors"
+                :class="{'bg-primary/5': selectedIds.includes(plan.id)}"
               >
-                <option value="">-- Tidak Ada Potongan --</option>
-                <option v-for="d in availableDiscounts" :key="d.id" :value="d.id">
-                  {{ d.name }} ({{ formatDiscountValue(d.value, d.type) }})
-                </option>
-              </select>
-              
-              <button 
-                v-if="plan.discount" 
-                @click="applyDiscount(plan, null)" 
-                class="btn btn-sm btn-error btn-outline"
-              >
-                Hapus
-              </button>
-            </div>
-
-            <p v-if="plan.discount" class="text-sm mt-2 text-warning font-semibold">
-              Potongan Diterapkan: -{{ formatDiscountValue(plan.discount.value, plan.discount.type) }}
-            </p>
-
-            <p class="text-lg font-extrabold mt-2 text-right">
-              Total Akhir: Rp {{ formatRupiah(calculateTotal(plan.item.amount, plan.discount?.value, plan.discount?.type)) }}
-            </p>
-          </div>
+                <td class="text-center">
+                  <input 
+                    type="checkbox" 
+                    class="checkbox checkbox-primary checkbox-sm" 
+                    v-model="selectedIds" 
+                    :value="plan.id" 
+                  />
+                </td>
+                <td class="font-semibold text-sm">{{ plan.item.name }}</td>
+                <td class="text-right text-sm opacity-60">Rp {{ formatRupiah(plan.item.amount) }}</td>
+                <td class="text-center">
+                  <div v-if="plan.discount" class="flex flex-col items-center gap-0.5">
+                    <span class="text-[9px] font-black text-gray-500 uppercase tracking-tighter">
+                      {{ plan.discount.name || plan.discount.description || 'Potongan' }}
+                    </span>
+                    <div class="badge badge-warning badge-outline h-5 text-[10px] font-bold px-2">
+                      -{{ formatDiscountValue(plan.discount.value, plan.discount.type) }}
+                    </div>
+                  </div>
+                  <span v-else class="text-[10px] opacity-20 italic">-</span>
+                </td>
+                <td class="text-right font-bold text-sm" :class="plan.discount ? 'text-success' : 'text-base-content'">
+                  Rp {{ formatRupiah(calculateTotal(plan.item.amount, plan.discount?.value, plan.discount?.type)) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
       <div class="modal-action">
-        <button class="btn btn-success" :disabled="modalLoading" @click="saveDiscountChanges">
-          <span v-if="modalLoading" class="loading loading-spinner loading-sm"></span>
-          <span v-else>Simpan Perubahan Potongan</span>
+        <button class="btn btn-ghost btn-sm" @click="$emit('close')">Batal</button>
+        <button 
+          class="btn btn-success btn-sm px-8" 
+          :disabled="modalLoading || !activePayerDetails" 
+          @click="saveDiscountChanges"
+        >
+          <span v-if="modalLoading" class="loading loading-spinner loading-xs"></span>
+          <span v-else>Simpan Perubahan</span>
         </button>
-        <button class="btn btn-neutral" @click="$emit('close')">Batal</button>
       </div>
     </div>
   </div>
@@ -90,7 +139,10 @@ const emit = defineEmits(['close', 'changesSaved']);
 
 const modalLoading = ref(false);
 const activePayerDetails = ref(null);
+const originalDetails = ref([]); // Menyimpan backup data asli dari API
+const selectedIds = ref([]);
 
+// --- Computed ---
 const totalTagihan = computed(() => {
     if (!activePayerDetails.value) return 0;
     return activePayerDetails.value.reduce(
@@ -99,88 +151,105 @@ const totalTagihan = computed(() => {
     );
 });
 
+const isAllSelected = computed(() => {
+    return activePayerDetails.value?.length > 0 && selectedIds.value.length === activePayerDetails.value.length;
+});
+
+// --- Logic ---
 const fetchPaymentPlanDetails = async (payerId) => {
     if (!payerId) return;
     modalLoading.value = true;
-    activePayerDetails.value = null;
-
+    selectedIds.value = [];
     try {
         const response = await api.get(`/payment-plans?payer_id=${payerId}`);
-        // Kloning data agar perubahan di modal tidak langsung memengaruhi state global
-        activePayerDetails.value = JSON.parse(JSON.stringify(response.data.data || [])); 
+        const data = response.data.data || [];
+        // Clone data untuk diedit dan backup
+        activePayerDetails.value = JSON.parse(JSON.stringify(data)); 
+        originalDetails.value = JSON.parse(JSON.stringify(data)); 
     } catch (error) {
-        console.error(`Gagal memuat Payment Plan untuk Payer ID ${payerId}:`, error);
-        Swal.fire("Error", "Gagal memuat rincian Payment Plan. Silakan coba lagi.", "error");
-        activePayerDetails.value = [];
+        Swal.fire("Error", "Gagal memuat rincian tagihan.", "error");
     } finally {
         modalLoading.value = false;
     }
 };
 
-const applyDiscount = (plan, discountId) => {
-    let discount = null;
-    let discountDetails = null;
+const toggleSelectAll = (e) => {
+    selectedIds.value = e.target.checked ? activePayerDetails.value.map(p => p.id) : [];
+};
 
-    if (discountId) {
-        discountDetails = props.availableDiscounts.find(d => d.id == discountId);
-        if (discountDetails) {
-            discount = {
-                id: discountDetails.id,
-                description: discountDetails.description,
-                type: discountDetails.type,
-                value: discountDetails.value 
-            };
-        }
+const resetAllToOriginal = () => {
+    activePayerDetails.value = JSON.parse(JSON.stringify(originalDetails.value));
+    selectedIds.value = [];
+};
+
+const handleBulkAction = (event) => {
+    try {
+        const action = JSON.parse(event.target.value);
+        if (!action || selectedIds.value.length === 0) return;
+
+        activePayerDetails.value.forEach(plan => {
+            if (selectedIds.value.includes(plan.id)) {
+                if (action.type === 'apply') {
+                    plan.discount = { 
+                        id: action.data.id, 
+                        name: action.data.name,
+                        description: action.data.description,
+                        type: action.data.type, 
+                        value: action.data.value 
+                    };
+                } else if (action.type === 'clear') {
+                    plan.discount = null;
+                }
+            }
+        });
+    } finally {
+        event.target.selectedIndex = 0;
     }
-    
-    // Perbarui objek plan secara reaktif
-    plan.discount = discount;
 };
 
 const saveDiscountChanges = async () => {
-    if (!activePayerDetails.value || activePayerDetails.value.length === 0) return;
-
     modalLoading.value = true;
-    
     let successCount = 0;
     let failCount = 0;
     
     for (const plan of activePayerDetails.value) {
         try {
-            const updatePayload = {
+            await api.patch(`/payment-plans/${plan.id}`, {
                 discount_id: plan.discount?.id || null, 
-                // Sertakan data lain yang diperlukan oleh API patch, contoh:
                 payer_id: plan.payer_id,
                 payment_template_detail_id: plan.payment_template_detail_id
-            };
-
-            const response = await api.patch(`/payment-plans/${plan.id}`, updatePayload); 
-            
-            if (response.data.success) {
-                successCount++;
-            } else {
-                failCount++;
-            }
+            });
+            successCount++;
         } catch (error) {
-            console.error(`Gagal menyimpan diskon untuk Plan ID ${plan.id}:`, error);
             failCount++;
         }
     }
     
     modalLoading.value = false;
-    emit('close'); // Tutup modal
+    emit('close');
+    Swal.fire(failCount === 0 ? 'Berhasil!' : 'Selesai', `Perubahan disimpan.`, failCount === 0 ? 'success' : 'warning');
+    emit('changesSaved');
+};
 
-    if (failCount === 0) {
-        Swal.fire('Berhasil!', `${successCount} perubahan potongan berhasil disimpan.`, 'success');
-        emit('changesSaved'); // Beri tahu komponen induk untuk memuat ulang data utama
-    } else {
-        Swal.fire('Peringatan!', `Gagal menyimpan ${failCount} perubahan potongan.`, 'warning');
+// --- Watcher untuk mendeteksi UNCHECKLIST ---
+watch(selectedIds, (newVal, oldVal) => {
+    // Cari ID yang ada di oldVal tapi tidak ada di newVal (artinya di-unchecklist)
+    const unselectedId = oldVal.find(id => !newVal.includes(id));
+    
+    if (unselectedId) {
+        // Cari item di activePayerDetails
+        const plan = activePayerDetails.value.find(p => p.id === unselectedId);
+        // Cari data aslinya di originalDetails
+        const original = originalDetails.value.find(o => o.id === unselectedId);
+        
+        if (plan && original) {
+            // Restore data diskon ke kondisi awal
+            plan.discount = original.discount ? JSON.parse(JSON.stringify(original.discount)) : null;
+        }
     }
-}
+}, { deep: true });
 
 watch(() => props.isVisible, (newVal) => {
-    if (newVal && props.payerId) {
-        fetchPaymentPlanDetails(props.payerId);
-    }
+    if (newVal && props.payerId) fetchPaymentPlanDetails(props.payerId);
 });
 </script>

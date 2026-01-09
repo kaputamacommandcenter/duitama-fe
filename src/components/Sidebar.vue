@@ -17,7 +17,7 @@
         </button>
       </div>
 
-      <nav class="mt-4 space-y-2 px-2">
+      <nav class="mt-4 space-y-4 px-2 overflow-y-auto">
         <template v-for="item in menuItems" :key="item.id">
           <RouterLink
             v-if="!item.children"
@@ -32,51 +32,32 @@
             <i :class="[item.icon, 'w-5 mr-3']"></i> {{ item.name }}
           </RouterLink>
 
-          <div v-else>
-            <button
-              @click="toggleMenu(item.id)"
-              class="w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200"
-              :class="[
-                { 'bg-white/20': openMenu === item.id },
-                isParentActive(item.children)
-                  ? 'bg-white text-sky-700 font-bold shadow-inner'
-                  : 'hover:bg-white/10'
-              ]"
+          <div v-else class="space-y-1">
+            <h3
+              class="px-3 py-2 text-sm font-semibold text-white/70 tracking-wider uppercase border-b border-white/20 mb-1 cursor-default"
+              :class="{ 'text-white': isParentActive(item.children) }"
             >
-              <div class="flex items-center">
-                <i :class="[item.icon, 'w-5 mr-1']"></i>
-                <span>{{ item.name }}</span>
-              </div>
-              <i
-                class="fa-solid fa-chevron-down text-xs transition-transform"
-                :class="{ 'rotate-180': openMenu === item.id }"
-              ></i>
-            </button>
+              <i :class="[item.icon, 'w-4 mr-2']"></i> {{ item.name }}
+            </h3>
 
-            <transition name="fade">
-              <div
-                v-if="openMenu === item.id || isParentActive(item.children)"
-                class="ml-8 mt-1 space-y-1"
+            <div class="ml-4 space-y-1">
+              <RouterLink
+                v-for="subitem in item.children"
+                :key="subitem.id"
+                :to="subitem.link ?? '/'"
+                class="block px-3 py-1.5 rounded-lg transition"
+                :class="[
+                  activeClass(subitem.link),
+                  route.path !== subitem.link ? 'text-white/90 hover:bg-white/20' : ''
+                ]"
+                @click="$emit('close-sidebar')"
               >
-                <RouterLink
-                  v-for="subitem in item.children"
-                  :key="subitem.id"
-                  :to="subitem.link ?? '/'"
-                  class="block px-3 py-1.5 rounded-lg transition"
-                  :class="[
-                    activeClass(subitem.link),
-                    route.path !== subitem.link ? 'text-white/90 hover:bg-white/20' : ''
-                  ]"
-                  @click="$emit('close-sidebar')"
-                >
-                  <i :class="[subitem.icon, 'w-4 mr-2']"></i> {{ subitem.name }}
-                </RouterLink>
-              </div>
-            </transition>
+                <i :class="[subitem.icon, 'w-4 mr-2']"></i> {{ subitem.name }}
+              </RouterLink>
+            </div>
           </div>
         </template>
       </nav>
-
       <div class="mt-auto p-4 md:hidden border-t border-white/20">
         <button
           @click="$emit('logout')"
@@ -90,8 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineEmits, onMounted } from "vue"
-import { useRoute } from "vue-router"
+import { useRoute } from 'vue-router'
 
 const route = useRoute()
 
@@ -104,39 +84,46 @@ interface MenuItem {
   children?: MenuItem[]
 }
 
-// Data menu utama
+// Data menu utama yang direvisi: Beranda dipisah ke atas
 const menuItems: MenuItem[] = [
-  {id: "beranda",name: "Beranda",icon: "fa-solid fa-house",link: "/dashboard"},
+  // ITEM TUNGGAL: BERANDA (Ditempatkan di paling atas)
+  { id: "beranda", name: "Beranda", icon: "fa-solid fa-house", link: "/dashboard" },
+
+  // KELOMPOK 1: TRANSAKSI UTAMA (Dihapus Beranda)
   {
-    id: "kelola-tagihan",
-    name: "Kelola Tagihan",
-    icon: "fa-solid fa-file-lines",
+    id: "transaksi-utama",
+    name: "Transaksi Utama",
+    icon: "fa-solid fa-file-invoice-dollar", 
     children: [
-      { id: "generate-tagihan", name: "Generate Tagihan", icon: "fa-solid fa-receipt", link: "/dashboard/generate-tagihan" },
-      { id: "data-tagihan", name: "Data Tagihan", icon: "fa-solid fa-receipt", link: "/dashboard/data-tagihan" },
+      { id: "rencana-pembayaran", name: "Rencana Pembayaran", icon: "fa-solid fa-file-invoice", link: "/dashboard/rencana-pembayaran" },
+      { id: "daftar-tagihan", name: "Daftar Tagihan", icon: "fa-solid fa-file-invoice", link: "/dashboard/daftar-tagihan" },
     ]
   },
+  
+  // KELOMPOK 2: MANAJEMEN PEMBAYAR (MASTER DATA)
   {
-    id: "kelola-pembayaran",
-    name: "Kelola Pembayaran",
-    icon: "fa-solid fa-file-lines",
+    id: "manajemen-pembayar",
+    name: "Manajemen Pembayar",
+    icon: "fa-solid fa-users",
     children: [
-      { id: "template-pembayaran", name: "Template Pembayaran", icon: "fa-solid fa-file", link: "/dashboard/template-pembayaran" },
-      { id: "Potongan", name: "Potongan", icon: "fa-solid fa-tag", link: "/dashboard/potongan" },
+      { id: "payers", name: "Data Pembayar", icon: "fa-solid fa-user-friends", link: "/dashboard/payers" },
+      { id: "payer-groups", name: "Kelompok Pembayar", icon: "fa-solid fa-layer-group", link: "/dashboard/payer-groups" },
     ]
   },
+
+  // KELOMPOK 3: KONFIGURASI TRANSAKSI (Pengaturan/Template)
   {
-    id: "kelola-pembayar",
-    name: "Kelola Pembayar",
-    icon: "fa-solid fa-gear",
+    id: "konfigurasi-transaksi",
+    name: "Konfigurasi Transaksi",
+    icon: "fa-solid fa-sliders",
     children: [
-      {id: "payers",name: "Data Pembayar",icon: "fa-solid fa-user",link: "/dashboard/payers"},
-      {id: "payer-groups",name: "Kelompok Pembayar",icon: "fa-solid fa-users",link: "/dashboard/payer-groups"},
+      { id: "template-pembayaran", name: "Template Pembayaran", icon: "fa-solid fa-file-alt", link: "/dashboard/template-pembayaran" },
+      { id: "potongan", name: "Pengelolaan Potongan", icon: "fa-solid fa-tags", link: "/dashboard/potongan" },
     ]
-  }
+  },
 ]
 
-// PERBAIKAN 1: Hapus `const props` dan `eslint-disable`
+// Props (Tidak berubah)
 defineProps<{
   isSidebarOpen: boolean
   windowWidth: number
@@ -144,34 +131,14 @@ defineProps<{
 
 const emit = defineEmits(["close-sidebar", "logout"])
 
-const openMenu = ref<string>("")
 
-// Otomatis buka menu aktif
-onMounted(() => {
-  const currentPath = route.path
-  for (const parent of menuItems) {
-    if (parent.children) {
-      const isActive = parent.children.some((child) => child.link === currentPath)
-      if (isActive) {
-        openMenu.value = parent.id
-        break
-      }
-    }
-  }
-})
-
-// Kelas aktif
+// Kelas aktif (Tidak berubah)
 const activeClass = (path?: string): string => {
   if (!path) return ""
   return route.path === path ? "bg-white text-sky-700 font-bold shadow-inner" : ""
 }
 
-// Toggle dropdown
-const toggleMenu = (menuId: string) => {
-  openMenu.value = openMenu.value === menuId ? "" : menuId
-}
-
-// Cek apakah parent aktif
+// Cek apakah parent aktif (Digunakan hanya untuk memberikan gaya pada judul grup)
 const isParentActive = (children?: MenuItem[]): boolean => {
   if (!children) return false
   return children.some((child) => route.path === child.link)
@@ -179,6 +146,7 @@ const isParentActive = (children?: MenuItem[]): boolean => {
 </script>
 
 <style scoped>
+/* Transisi Sidebar: Tetap sama */
 .slide-enter-active,
 .slide-leave-active {
   transition: transform 0.3s ease;
@@ -187,14 +155,5 @@ const isParentActive = (children?: MenuItem[]): boolean => {
 .slide-leave-to {
   transform: translateX(-100%);
 }
-
-.fade-enter-active,
-.slide-leave-active {
-  transition: opacity 0.5s ease, transform 0.4s ease;
-}
-.fade-enter-from,
-.slide-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
+/* Hapus transisi `.fade` karena tidak ada dropdown */
 </style>

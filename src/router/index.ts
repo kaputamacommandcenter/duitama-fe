@@ -49,35 +49,44 @@ const routes = [
         ]
       }
     },
-    // Generate Tagihan (Diperbaiki: path: 'generate-tagihan')
     {
-      path: 'generate-tagihan', name: 'generate-tagihan', component: () => import('../pages/GenerateTagihanPage.vue'),
+      path: 'rencana-pembayaran', name: 'rencana-pembayaran', component: () => import('../pages/PaymentPlanPage.vue'),
       meta: {
-        title: 'DUITAMA | Generate Tagihan',
+        title: 'DUITAMA | Rencana Pembayaran',
         breadcrumb: [
-          { name: "Dashboard" },
-          { name: "Generate Tagihan" }
+          { name: "Dashboard", link: "/dashboard" },
+          { name: "Rencana Pembayaran" }
         ]
       }
     },
     {
-      path: 'data-tagihan', name: 'data-tagihan', component: () => import('../pages/DataTagihanPage.vue'),
+      path: 'generate-rencana-pembayaran', name: 'generate-rencana-pembayaran', component: () => import('../pages/GeneratePaymentPlan.vue'),
       meta: {
-        title: 'DUITAMA | Data Tagihan',
+        title: 'DUITAMA | Generate Rencana Pembayaran',
         breadcrumb: [
-          { name: "Dashboard" },
-          { name: "Data Tagihan" }
+          { name: "Dashboard", link: "/dashboard" },
+          { name: "Rencana Pembayaran", link: "/dashboard/rencana-pembayaran" },
+          { name: "Generate Rencana Pembayaran" }
         ]
       }
     },
-    // Template Pembayaran (Diperbaiki: path: 'template-pembayaran')
     {
-      path: 'template-pembayaran', name: 'template-pembayaran', component: () => import('../pages/TemplatePembayaranPage.vue'),
+      path: 'template-pembayaran', name: 'template-pembayaran', component: () => import('../pages/PaymentTemplatePage.vue'),
       meta: {
         title: 'DUITAMA | Template Pembayaran',
         breadcrumb: [
           { name: "Dashboard", link: "/dashboard" },
           { name: "Template Pembayaran" }
+        ]
+      }
+    },
+    {
+      path: 'daftar-tagihan', name: 'daftar-tagihan', component: () => import('../pages/InvoicePage.vue'),
+      meta: {
+        title: 'DUITAMA | Daftar Tagihan',
+        breadcrumb: [
+          { name: "Dashboard", link: "/dashboard" },
+          { name: "Daftar Tagihan" }
         ]
       }
     },
@@ -115,7 +124,7 @@ const routes = [
       }
     },
     {
-      path: 'potongan', name: 'potongan', component: () => import('../pages/Potongan.vue'),
+      path: 'potongan', name: 'potongan', component: () => import('../pages/DiscountPage.vue'),
       meta: {
         title: 'DUITAMA | Potongan',
         breadcrumb: [

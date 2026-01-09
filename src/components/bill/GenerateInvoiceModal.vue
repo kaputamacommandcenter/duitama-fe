@@ -80,7 +80,7 @@ const props = defineProps({
   formatDiscountValue: Function,
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'invoiceCreated']);
 
 const modalLoading = ref(false);
 const activePayerDetails = ref(null);
@@ -128,32 +128,75 @@ const processPayment = () => {
         return;
     }
 
-    // 1. Ambil detail item yang dipilih
     const selectedPlans = activePayerDetails.value
         .filter(plan => selectedPlansForPayment.value.includes(plan.id));
+    
+    // Total amount tetap dihitung di frontend hanya untuk tujuan display/konfirmasi di modal Swal
+    const finalTotalAmount = totalSelectedAmount.value; 
 
-    // 2. Buat konten HTML untuk Invoice
     const invoiceHTML = generateSampleInvoice(selectedPlans);
     
-    // 3. Tampilkan Invoice menggunakan Swal
     Swal.fire({
-        title: 'Contoh Invoice Pembayaran',
+        title: 'Konfirmasi Pembuatan Invoice',
         html: invoiceHTML,
         icon: 'info',
         width: '800px',
-        confirmButtonText: 'Tutup & Lanjutkan Proses (Simulasi)',
+        confirmButtonText: 'Proses Pembayaran & Simpan Invoice', 
         showCancelButton: true,
-        cancelButtonText: 'Batal Pembayaran',
+        cancelButtonText: 'Batal',
         customClass: {
             title: 'text-2xl font-bold',
             htmlContainer: 'text-left overflow-auto max-h-[60vh] p-4',
         }
-    }).then((result) => {
-        // Logika setelah user menekan tombol (simulasi)
+    }).then(async (result) => {
         if (result.isConfirmed) {
-             Swal.fire('Proses Lanjutan (Simulasi)', 'Invoice berhasil di-generate. Lanjutkan ke API Pembayaran...', 'success');
-             emit('close');
-             selectedPlansForPayment.value = [];
+            
+            // --- PAYLOAD BARU YANG SANGAT SEDERHANA ---
+            const payload = {
+                payer_id: props.payerId,
+                payment_plan_ids: selectedPlansForPayment.value, // Kirim array ID yang dipilih
+            };
+
+            Swal.fire({
+                title: 'Sedang Memproses...',
+                text: 'Membuat dan menyimpan invoice ke sistem...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            try {
+                // Panggil API POST ke endpoint 'invoices' dengan payload sederhana
+                const response = await api.post('/invoices', payload);
+                const invoiceData = response.data.data;
+
+                // Tampilkan detail invoice yang dikembalikan oleh backend
+                Swal.fire({
+                    title: 'Invoice Berhasil Dibuat!',
+                    html: `
+                        <p class="text-left"><strong>No. Invoice:</strong> ${invoiceData.invoice_number}</p>
+                        <p class="text-left"><strong>Total Tagihan:</strong> Rp ${props.formatRupiah(invoiceData.total_amount)}</p>
+                        <p class="text-left"><strong>Virtual Account:</strong> <span class="font-bold text-primary">${invoiceData.va_number || 'N/A'}</span></p>
+                        <p class="mt-3 text-success">Invoice telah disimpan dan menunggu pembayaran.</p>
+                    `,
+                    icon: 'success',
+                    confirmButtonText: 'Tutup'
+                });
+
+                // Beri tahu komponen induk untuk me-refresh data
+                emit('invoiceCreated'); 
+                emit('close');
+                selectedPlansForPayment.value = [];
+
+            } catch (error) {
+                console.error("Gagal menyimpan invoice:", error);
+                Swal.fire(
+                    'Gagal',
+                    `Terjadi kesalahan saat membuat invoice. Error: ${error.response?.data?.message || error.message}`,
+                    'error'
+                );
+            }
         }
     });
 };
@@ -251,7 +294,51 @@ const generateSampleInvoice = (plans) => {
     `;
 };
 
+const generateInvoicePayload = (plans, totalAmount) => {
+    if (plans.length === 0) return null;
 
+    const payer = plans[0].payer;
+
+    // Mapping details untuk array 'details'
+    const details = plans.map(plan => {
+        const originalAmount = plan.item.amount;
+        const finalAmount = props.calculateTotal(originalAmount, plan.discount?.value, plan.discount?.type);
+
+        return {
+            payment_template_detail_id: plan.id, // Asumsi: ID dari payment plan detail digunakan
+            discount_id: plan.discount?.id || null,
+            detail_name: plan.item.name,
+            discount_name: plan.discount?.description || null,
+            base_amount: originalAmount,
+            total_amount: finalAmount,
+        };
+    });
+
+    // Menghasilkan nomor VA secara acak (Simulasi, biasanya dari Payment Gateway)
+    const vaNumber = `8888${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+    const now = new Date();
+    const dueDate = new Date(now);
+    dueDate.setDate(now.getDate() + 1); // Jatuh tempo 1 hari setelah pembuatan
+
+    return {
+        // Data Payer (diambil dari item pertama)
+        payer_id: payer.id,
+        payer_name: payer.payer_name,
+        identity_number: payer.identity_number || payer.npm || 'N/A',
+        npm: payer.npm || 'N/A',
+        
+        // Data Invoice Utama
+        invoice_number: `INV-${new Date().getFullYear()}${new Date().getMonth() + 1}${new Date().getDate()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+        va_number: vaNumber,
+        date: now.toISOString(),
+        due_date: dueDate.toISOString(),
+        total_amount: totalAmount, // Menggunakan total yang sudah dihitung
+        status: 'Pending',
+        
+        // Detail Tagihan
+        details: details,
+    };
+};
 watch(() => props.isVisible, (newVal) => {
     if (newVal && props.payerId) {
         fetchPaymentPlanDetails(props.payerId);
